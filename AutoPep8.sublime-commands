@@ -1,0 +1,10 @@
+[
+    {
+        "caption": "PEP8: Preview Changes",
+        "command": "auto_pep8_preview"
+    },
+    {
+        "caption": "PEP8: Format Code",
+        "command": "auto_pep8"
+    }
+]

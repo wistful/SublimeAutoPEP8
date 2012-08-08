@@ -1,0 +1,4 @@
+[
+    { "keys": ["ctrl+8"], "command": "auto_pep8_preview" },
+    { "keys": ["ctrl+shift+8"], "command": "auto_pep8" }
+]

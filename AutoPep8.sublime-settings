@@ -1,0 +1,6 @@
+{
+    // do not fix these errors/warnings (e.g. E4,W)
+    "ignore": "",
+    // select errors/warnings (e.g. E4,W)
+    "select": ""
+}

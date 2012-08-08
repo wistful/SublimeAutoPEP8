@@ -1,0 +1,40 @@
+[
+    {
+        "caption": "Preferences: AutoPep8 Settings – Default",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/autopep8/AutoPep8.sublime-settings"
+        }
+    },
+    {
+        "caption": "Preferences: AutoPep8 Settings – User",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/User/AutoPep8.sublime-settings"
+        }
+    },
+    {
+        "caption": "Preferences: AutoPep8 Key Bindings – Default",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/autopep8/Default (Windows).sublime-keymap",
+            "platform": "Windows"
+        }
+    },
+    {
+        "caption": "Preferences: AutoPep8 Key Bindings – Default",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/autopep8/Default (OSX).sublime-keymap",
+            "platform": "OSX"
+        }
+    },
+    {
+        "caption": "Preferences: AutoPep8 Key Bindings – Default",
+        "command": "open_file",
+        "args": {
+            "file": "${packages}/autopep8/Default (Linux).sublime-keymap",
+            "platform": "Linux"
+        }
+    }
+]
