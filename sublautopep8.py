@@ -34,8 +34,3 @@ class AutoPep8Command(sublime_plugin.TextCommand):
             params.append("--select=" + settings.get("select"))
         autopep8.main(params)
         self.view.replace(edit, sublime.Region(0, self.view.size()), open(tmp_path, 'r').read())
-        # if not self.view.isReadOnly():
-        #     self.view.replace(edit, sublime.Region(0, self.view.size()), open(tmp_path, 'r').read())
-        # else:
-        #     sublime.active_window().new_file()
-        #     sublime.active_window().active_view().insert(edit, 0, open(tmp_path, 'r').read())
