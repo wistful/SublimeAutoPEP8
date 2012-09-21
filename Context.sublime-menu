@@ -1,6 +1,10 @@
 [
     {
         "command": "auto_pep8",
-        "caption": "AutoPep8"
+        "caption": "AutoPep8 Format"
+    },
+    {
+        "command": "auto_pep8_preview",
+        "caption": "AutoPep8 Preview"
     }
 ]
