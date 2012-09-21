@@ -1,36 +1,47 @@
 ## coding=utf-8
 import sublime
 import sublime_plugin
-import autopep8
-import StringIO
 import tempfile
+import subprocess
+import os
 
 
 class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        output = StringIO.StringIO()
-        params = [sublime.active_window().active_view().file_name(), "-d", "-v"]
+        plugin_path = os.path.join(sublime.packages_path(), "SublimeAutoPEP8")
+        file_path = sublime.active_window().active_view().file_name()
+        params = ["python", "autopep8.py", file_path, "-d", "-vv"]
         settings = sublime.load_settings('AutoPep8.sublime-settings')
         if settings.get("ignore"):
             params.append("--ignore=" + settings.get("ignore"))
         if settings.get("select"):
             params.append("--select=" + settings.get("select"))
-        output.write(params)
-        autopep8.main(params, output)
-        output.read()
-        sublime.active_window().new_file()
-        sublime.active_window().active_view().insert(edit, 0, output.buf)
+
+        p = subprocess.Popen(params, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=plugin_path)
+        diff = p.stdout.read()
+        for line in p.stderr:
+            print line
+        if len(diff) == 0:
+            sublime.message_dialog("0 issues to fix")
+        else:
+            sublime.active_window().new_file()
+            sublime.active_window().active_view().set_syntax_file("Packages/Diff/Diff.tmLanguage")
+            sublime.active_window().active_view().insert(edit, 0, diff)
 
 
 class AutoPep8Command(sublime_plugin.TextCommand):
     def run(self, edit):
+        plugin_path = os.path.join(sublime.packages_path(), "SublimeAutoPEP8")
         fd, tmp_path = tempfile.mkstemp()
         open(tmp_path, 'w').write(self.view.substr(sublime.Region(0, self.view.size())))
-        params = [tmp_path, "-i", "-v"]
+        params = ["python", "autopep8.py", tmp_path, "-i"]
         settings = sublime.load_settings('AutoPep8.sublime-settings')
         if settings.get("ignore"):
             params.append("--ignore=" + settings.get("ignore"))
         if settings.get("select"):
             params.append("--select=" + settings.get("select"))
-        autopep8.main(params)
+
+        p = subprocess.Popen(params, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=plugin_path)
+        for line in p.stderr:
+            print line
         self.view.replace(edit, sublime.Region(0, self.view.size()), open(tmp_path, 'r').read())
