@@ -2,16 +2,16 @@
     "schema_version": "1.2",
     "packages": [
         {
-            "name": "SublimeAutoPEP8",
+            "name": "AutoPEP8",
             "description": "Automatically formats Python code to conform to the PEP 8 style guide using autopep8.py module",
             "author": "wistful",
             "homepage": "https://github.com/wistful/SublimeAutoPEP8",
-            "last_modified": "2012-09-20 17:44:31",
+            "last_modified": "2012-10-02 11:55:27",
             "platforms": {
                 "linux": [
                     {
-                        "version": "0.6",
-                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/zipball/v0.6"
+                        "version": "0.6.1",
+                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/zipball/v0.6.1"
                     }
                 ]
             }
