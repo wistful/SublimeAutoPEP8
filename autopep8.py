@@ -64,7 +64,8 @@ def open_with_encoding(filename, encoding, mode='r'):
         # Python 3
         return open(filename, mode=mode, encoding=encoding)
     except TypeError:
-        return open(filename, mode=mode)
+        # Python 2
+        return codecs.open(filename, mode=mode, encoding=encoding)
 
 
 def detect_encoding(filename):
@@ -84,7 +85,16 @@ def detect_encoding(filename):
         except (SyntaxError, LookupError, UnicodeDecodeError):
             return 'latin-1'
     except AttributeError:
-        return 'utf-8'
+        # Python 2
+        encoding = 'utf-8'
+        try:
+            # Check for correctness of encoding
+            with open_with_encoding(filename, encoding) as input_file:
+                input_file.read()
+        except UnicodeDecodeError:
+            encoding = 'latin-1'
+
+        return encoding
 
 
 def read_from_filename(filename, readlines=False):
@@ -230,7 +240,8 @@ class FixPEP8(object):
             sys.stderr.write('{n} issues to fix\n'.format(
                 n=len(results)))
 
-        self._fix_source(results)
+        self._fix_source(filter_results(source=''.join(self.source),
+                                        results=results))
         return ''.join(self.source)
 
     def fix_e101(self, _):
@@ -451,6 +462,7 @@ class FixPEP8(object):
             self.source[line_index] = fixed
 
     def fix_e201(self, result):
+        """Remove extraneous whitespace."""
         line_index = result['line'] - 1
         target = self.source[line_index]
         offset = result['column'] - 1
@@ -471,13 +483,14 @@ class FixPEP8(object):
             self.source[line_index] = fixed
 
     def fix_e224(self, result):
+        """Remove extraneous whitespace around operator."""
         target = self.source[result['line'] - 1]
         offset = result['column'] - 1
         fixed = target[:offset] + target[offset:].replace('\t', ' ')
         self.source[result['line'] - 1] = fixed
 
     def fix_e225(self, result):
-        """Fix whitespace around operator."""
+        """Fix missing whitespace around operator."""
         target = self.source[result['line'] - 1]
         offset = result['column'] - 1
         fixed = target[:offset] + ' ' + target[offset:]
@@ -499,6 +512,7 @@ class FixPEP8(object):
         self.source[line_index] = fixed
 
     def fix_e251(self, result):
+        """Remove whitespace around parameter '=' sign."""
         line_index = result['line'] - 1
         target = self.source[line_index]
 
@@ -556,20 +570,18 @@ class FixPEP8(object):
             self.source[line_index] = fixed
 
     def fix_e301(self, result):
+        """Add missing blank line."""
         cr = self.newline
         self.source[result['line'] - 1] = cr + self.source[result['line'] - 1]
 
     def fix_e302(self, result):
+        """Add missing 2 blank lines."""
         add_linenum = 2 - int(result['info'].split()[-1])
         cr = self.newline * add_linenum
         self.source[result['line'] - 1] = cr + self.source[result['line'] - 1]
 
-    def fix_e304(self, result):
-        line = result['line'] - 2
-        if not self.source[line].strip():
-            self.source[line] = ''
-
     def fix_e303(self, result):
+        """Remove extra blank lines."""
         delete_linenum = int(result['info'].split('(')[1].split(')')[0]) - 2
         delete_linenum = max(1, delete_linenum)
 
@@ -589,7 +601,14 @@ class FixPEP8(object):
 
         return modified_lines
 
+    def fix_e304(self, result):
+        """Remove blank line following function decorator."""
+        line = result['line'] - 2
+        if not self.source[line].strip():
+            self.source[line] = ''
+
     def fix_e401(self, result):
+        """Put imports on separate lines."""
         line_index = result['line'] - 1
         target = self.source[line_index]
         offset = result['column'] - 1
@@ -609,6 +628,7 @@ class FixPEP8(object):
         self.source[line_index] = fixed
 
     def fix_e501(self, result):
+        """Try to make lines fit within 79 characters."""
         line_index = result['line'] - 1
         target = self.source[line_index]
 
@@ -662,6 +682,7 @@ class FixPEP8(object):
         self.source[line_index] = target.rstrip('\n\r \t\\') + self.newline
 
     def fix_e701(self, result):
+        """Put colon-separated compound statement on separate lines."""
         line_index = result['line'] - 1
         target = self.source[line_index]
         c = result['column']
@@ -672,7 +693,7 @@ class FixPEP8(object):
         self.source[result['line'] - 1] = fixed_source
 
     def fix_e702(self, result, logical):
-        """Fix multiple statements on one line."""
+        """Put semicolon-separated compound statement on separate lines."""
         logical_lines = logical[2]
 
         line_index = result['line'] - 1
@@ -722,17 +743,21 @@ class FixPEP8(object):
         self.source[line_index] = ' '.join([left, new_center, right])
 
     def fix_e721(self, _):
+        """Switch to use isinstance()."""
         return self.refactor('idioms')
 
     def fix_w291(self, result):
+        """Remove trailing whitespace."""
         fixed_line = self.source[result['line'] - 1].rstrip()
         self.source[result['line'] - 1] = '%s%s' % (fixed_line, self.newline)
 
     def fix_w293(self, result):
+        """Remove trailing whitespace on blank line."""
         assert not self.source[result['line'] - 1].strip()
         self.source[result['line'] - 1] = self.newline
 
     def fix_w391(self, _):
+        """Remove trailing blank lines."""
         source = copy.copy(self.source)
         source.reverse()
         blank_count = 0
@@ -778,6 +803,7 @@ class FixPEP8(object):
             return range(1, 1 + original_length)
 
     def fix_w601(self, _):
+        """Replace the {}.has_key() form with 'in'."""
         return self.refactor('has_key')
 
     def fix_w602(self, _):
@@ -786,9 +812,11 @@ class FixPEP8(object):
                              ignore='with_traceback')
 
     def fix_w603(self, _):
+        """Replace <> with !=."""
         return self.refactor('ne')
 
     def fix_w604(self, _):
+        """Replace backticks with repr()."""
         return self.refactor('repr')
 
 
@@ -845,10 +873,6 @@ def _analyze_pep8result(result):
 
 
 def _get_difftext(old, new, filename):
-    try:
-        old = [unicode(o, detect_encoding(filename)) for o in old]
-    except NameError:
-        pass
     diff = unified_diff(old, new, 'original/' + filename, 'fixed/' + filename)
     return ''.join(diff)
 
@@ -1167,9 +1191,8 @@ class Wrapper(object):
                 continue
             if t[0] != tokenize.ENDMARKER:
                 self.tokens.append(t)
-        self.logical_line, self.mapping = self.build_tokens_logical(
-            self.tokens
-        )
+
+        self.logical_line = self.build_tokens_logical(self.tokens)
 
     def build_tokens_logical(self, tokens):
         """Build a logical line from a list of tokens.
@@ -1179,9 +1202,7 @@ class Wrapper(object):
 
         """
         # from pep8.py with minor modifications
-        mapping = []
         logical = []
-        length = 0
         previous = None
         for t in tokens:
             token_type, text = t[0:2]
@@ -1195,19 +1216,15 @@ class Wrapper(object):
                     if prev_text == ',' or (prev_text not in '{[('
                                             and text not in '}])'):
                         logical.append(' ')
-                        length += 1
                 elif end != start:  # different column
                     fill = self.lines[end_line - 1][end:start]
                     logical.append(fill)
-                    length += len(fill)
-            mapping.append((length, t))
             logical.append(text)
-            length += len(text)
             previous = t
         logical_line = ''.join(logical)
         assert logical_line.lstrip() == logical_line
         assert logical_line.rstrip() == logical_line
-        return logical_line, mapping
+        return logical_line
 
     def pep8_expected(self):
         """Replicates logic in pep8.py, to know what level to indent things to.
@@ -1463,6 +1480,53 @@ def check_syntax(code):
         return False
 
 
+def filter_results(source, results):
+    """Filter out spurious reports from pep8.
+
+    Currently we filter out errors about indentation in multiline strings.
+
+    """
+    e1_blacklisted_lines = multiline_string_lines(source)
+
+    for r in results:
+        if r['id'].lower().startswith('e1') or r['id'].lower() == 'w191':
+            if r['line'] in e1_blacklisted_lines:
+                continue
+        yield r
+
+
+def multiline_string_lines(source):
+    """Return line numbers that are within multiline strings.
+
+    The line numbers are indexed at 1.
+
+    """
+    sio = StringIO(source)
+    line_numbers = set()
+    try:
+        for t in tokenize.generate_tokens(sio.readline):
+            token_type = t[0]
+            token_string = t[1]
+            start_row = t[2][0]
+            end_row = t[3][0]
+
+            if (token_type == tokenize.STRING and
+                    starts_with_triple(token_string)):
+                # We increment by one since we want the contents of the
+                # string.
+                line_numbers |= set(range(1 + start_row, 1 + end_row))
+    except (IndentationError, tokenize.TokenError):
+        pass
+
+    return line_numbers
+
+
+def starts_with_triple(string):
+    """Return True if the string starts with triple single/double quotes."""
+    return (string.strip().startswith('"""') or
+            string.strip().startswith("'''"))
+
+
 def fix_file(filename, opts, output=sys.stdout):
     tmp_source = read_from_filename(filename)
 
@@ -1477,12 +1541,6 @@ def fix_file(filename, opts, output=sys.stdout):
     tmp_filename = filename
     if not pep8 or opts.in_place:
         encoding = detect_encoding(filename)
-
-    # For Python3
-    try:
-        tmp_source = unicode(tmp_source, detect_encoding(filename))
-    except NameError:
-        pass
 
     for _ in range(opts.pep8_passes):
         if fixed_source == tmp_source:
@@ -1588,7 +1646,7 @@ def main():
                 sys.stderr.write('[file:%s]\n' % name)
             try:
                 fix_file(name, opts, output)
-            except (UnicodeDecodeError, UnicodeEncodeError, IOError) as error:
+            except IOError as error:
                 sys.stderr.write(str(error) + '\n')
 
 
