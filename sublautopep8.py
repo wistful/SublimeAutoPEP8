@@ -8,7 +8,7 @@ import os
 
 class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        plugin_path = os.path.join(sublime.packages_path(), "SublimeAutoPEP8")
+        plugin_path = os.path.join(sublime.packages_path(), "AutoPEP8")
         file_path = sublime.active_window().active_view().file_name()
         params = ["python", "autopep8.py", file_path, "-d", "-vv"]
         settings = sublime.load_settings('AutoPep8.sublime-settings')
@@ -31,7 +31,7 @@ class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
 
 class AutoPep8Command(sublime_plugin.TextCommand):
     def run(self, edit):
-        plugin_path = os.path.join(sublime.packages_path(), "SublimeAutoPEP8")
+        plugin_path = os.path.join(sublime.packages_path(), "AutoPEP8")
         fd, tmp_path = tempfile.mkstemp()
         open(tmp_path, 'w').write(self.view.substr(sublime.Region(0, self.view.size())))
         params = ["python", "autopep8.py", tmp_path, "-i"]
