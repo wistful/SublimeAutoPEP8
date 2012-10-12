@@ -2,7 +2,7 @@
     "schema_version": "1.2",
     "packages": [
         {
-            "name": "AutoPEP8 Formatting",
+            "name": "SublimeAutoPEP8",
             "description": "Automatically formats Python code to conform to the PEP 8 style guide using autopep8.py module",
             "author": "wistful",
             "homepage": "https://github.com/wistful/SublimeAutoPEP8",
