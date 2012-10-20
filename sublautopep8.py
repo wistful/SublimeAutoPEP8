@@ -4,6 +4,10 @@ import sublime_plugin
 import tempfile
 import subprocess
 import os
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
