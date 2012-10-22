@@ -5,12 +5,12 @@ import tempfile
 import subprocess
 import os
 
+plugin_path = os.path.split(os.path.abspath(__file__))[0]
 
 class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        plugin_path = os.path.join(sublime.packages_path(), "AutoPEP8")
         file_path = sublime.active_window().active_view().file_name()
-        params = ["python", "autopep8.py", file_path, "-d", "-vv"]
+        params = ["env", "python", "autopep8.py", file_path, "-d", "-vv"]
         settings = sublime.load_settings('AutoPep8.sublime-settings')
         if settings.get("ignore"):
             params.append("--ignore=" + settings.get("ignore"))
@@ -34,7 +34,6 @@ class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
 class AutoPep8Command(sublime_plugin.TextCommand):
     def run(self, edit):
         encoding = sublime.active_window().active_view().encoding()
-        plugin_path = os.path.join(sublime.packages_path(), "AutoPEP8")
         fd, tmp_path = tempfile.mkstemp()
         data = self.view.substr(sublime.Region(0, self.view.size()))
         open(tmp_path, 'w').write(data.encode(encoding))
