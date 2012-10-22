@@ -10,7 +10,7 @@ class AutoPep8PreviewCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         plugin_path = os.path.join(sublime.packages_path(), "AutoPEP8")
         file_path = sublime.active_window().active_view().file_name()
-        params = ["python", "autopep8.py", file_path, "-d", "-vv"]
+        params = ["env", "python", "autopep8.py", file_path, "-d", "-vv"]
         settings = sublime.load_settings('AutoPep8.sublime-settings')
         if settings.get("ignore"):
             params.append("--ignore=" + settings.get("ignore"))
