@@ -3,4 +3,9 @@
     "ignore": "",
     // select errors/warnings (e.g. E4,W)
     "select": ""
+    // path to python binary which should use to execute autopep8.py module
+    // ,"python": "/usr/bin/python3"
+    // ,"python": "pythonw"
+    // path to autopep8 lib
+    // ,"autopep8": "/home/sublime/autopep8.py"
 }
