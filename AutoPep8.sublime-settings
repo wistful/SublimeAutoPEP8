@@ -1,11 +1,12 @@
 {
-    // do not fix these errors/warnings (e.g. E4,W)
+    // do not fix these errors / warnings(e.g. E4, W)
     "ignore": "",
-    // select errors/warnings (e.g. E4,W)
-    "select": ""
+    // select errors / warnings(e.g. E4, W)
+    "select": "",
+    "format_on_save": false
     // path to python binary which should use to execute autopep8.py module
-    // ,"python": "/usr/bin/python3"
-    // ,"python": "pythonw"
+    // , "python": "/usr/bin/python3"
+    // , "python": "pythonw"
     // path to autopep8 lib
-    // ,"autopep8": "/home/sublime/autopep8.py"
+    // , "autopep8": "/home/sublime/autopep8.py"
 }
