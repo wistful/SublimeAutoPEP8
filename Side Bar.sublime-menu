@@ -1,0 +1,3 @@
+[
+    { "caption": "PEP8: Format Code", "command": "auto_pep8_file", "args": {"paths": []} }
+]

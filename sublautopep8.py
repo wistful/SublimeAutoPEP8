@@ -77,7 +77,7 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             fd_in.write(substr) and fd_in.flush()
             self.format(in_path, out_path, preview)
             out_data = fd_out.read().decode(encoding)
-            if not out_data or out_data == substr:
+            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 6):
                 continue
 
             has_changes = True
@@ -91,3 +91,47 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
         if not has_changes:
             sublime.message_dialog("0 issues to fix")
+
+
+class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
+
+    file_names = None
+
+    def run(self, paths=None):
+        if not paths:
+            return
+
+        has_changes = False
+
+        for path in self.file_names:
+            fd2, out_path = tempfile.mkstemp(text=True)
+            sublime.status_message("autopep8: formatting {path}".format(path=path))
+            self.format(path, out_path, preview=False)
+            in_data = open(path).read()
+            out_data = open(out_path).read()
+            if in_data != out_data:
+                has_changes = True
+                open(path, 'w').write(out_data)
+        sublime.status_message("")
+        if not has_changes:
+            sublime.message_dialog("0 issues to fix")
+
+    def files(self, path):
+        result = []
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                if filename.endswith('py'):
+                    result.append(os.path.join(dirpath, filename))
+        return result
+
+    def is_visible(self, paths=None):
+        files = []
+        for path in paths:
+            if os.path.isdir(path):
+                files.extend(self.files(path))
+            if os.path.isfile(path) and path.endswith('py'):
+                files.append(path)
+        if not (files and filter(lambda item: item.endswith('py'), files)):
+            return False
+        self.file_names = files
+        return True
