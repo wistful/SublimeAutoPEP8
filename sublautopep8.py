@@ -28,8 +28,8 @@ class AutoPep8(object):
     def format_file(self, in_file, out_file, preview=True):
         """format/diff code from in_file using autopep8
         and save output in out_file"""
-        open(out_file, 'w').write(open(in_file, 'r').read())
-             # in_file doesn't change
+
+        open(out_file, 'w').write(open(in_file, 'r').read())  # in_file doesn't change
         settings = sublime.load_settings('AutoPep8.sublime-settings')
         params = [settings.get("python", "python"), settings.get(
             "autopep8", "autopep8.py"), out_file]
@@ -82,7 +82,14 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
     def run(self, edit, preview=True):
         encoding = self.get_encoding()
         preview_output = ''
+
         has_changes = False
+
+        # save cursor position
+        cur_row, cur_col = self.view.rowcol(self.view.sel()[0].begin())
+
+        # save viewport
+        vector = self.view.text_to_layout(self.view.visible_region().begin())
 
         for region, substr in self.sel():
             out_data = self.format_text(substr, encoding, preview)
@@ -97,6 +104,17 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
         if has_changes and preview_output:
             self.new_view(edit, encoding, preview_output)
+
+        # restore cursor position
+        sel = self.view.sel()
+        if len(sel) == 1 and sel[0].a == sel[0].b:
+            cur_point = self.view.text_point(cur_row, cur_col)
+            sel.subtract(sel[0])
+            sel.add(sublime.Region(cur_point, cur_point))
+
+        # restore viewport
+        self.view.set_viewport_position((0.0, 0.0))  # magic, next line doesn't work without it
+        self.view.set_viewport_position(vector)
 
         if not has_changes:
             sublime.message_dialog("0 issues to fix")
@@ -154,11 +172,29 @@ class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
     def on_pre_save(self, view):
         if not sublime.load_settings('AutoPep8.sublime-settings').get('format_on_save', False):
             return
+
+        # save cursor position
+        cur_row, cur_col = view.rowcol(view.sel()[0].begin())
+
+        # save viewport
+        vector = view.text_to_layout(view.visible_region().begin())
+
         encoding = self.get_encoding(view)
         region = sublime.Region(0, view.size())
         source = view.substr(region)
         out_data = self.format_text(source, encoding, preview=False)
-        edit = view.begin_edit()
         if out_data != source:
+            edit = view.begin_edit()
             view.replace(edit, region, out_data)
-        view.end_edit(edit)
+            view.end_edit(edit)
+
+            # restore cursor position
+            sel = view.sel()
+            if len(sel) == 1 and sel[0].a == sel[0].b:
+                cur_point = view.text_point(cur_row, cur_col)
+                sel.subtract(sel[0])
+                sel.add(sublime.Region(cur_point, cur_point))
+
+            # restore viewport
+            view.set_viewport_position((0.0, 0.0))  # magic, next line doesn't work without it
+            view.set_viewport_position(vector)
