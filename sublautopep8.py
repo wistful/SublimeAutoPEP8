@@ -25,7 +25,7 @@ class AutoPep8(object):
             params.append("--select=" + settings.get("select"))
         return params
 
-    def format_file(self, in_file, out_file, preview=True):
+    def format_file(self, in_file, out_file, preview=True, encoding='utf-8'):
         """format/diff code from in_file using autopep8
         and save output in out_file"""
 
@@ -37,10 +37,11 @@ class AutoPep8(object):
         print 'autopep8:', repr(params)
         p = subprocess.Popen(params, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, cwd=plugin_path)
-        p.wait()  # waiting while autpep8 finish
         if preview:
             # write diff to out_file
-            open(out_file, 'w').write(p.stdout.read())
+            output = p.stdout.read().decode(encoding)
+            output = output.replace(out_file, in_file)
+            open(out_file, 'w').write(output.encode(encoding))
         for line in p.stderr:
             print line
 
@@ -49,7 +50,7 @@ class AutoPep8(object):
         fd2, out_path = tempfile.mkstemp(text=True)
         fd_in, fd_out = os.fdopen(fd1, 'w'), os.fdopen(fd2)
         open(in_path, 'w').write(text.encode(encoding))
-        self.format_file(in_path, out_path, preview)
+        self.format_file(in_path, out_path, preview, encoding)
         out_data = fd_out.read().decode(encoding)
         return out_data
 
@@ -126,23 +127,47 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
     file_names = None
+    default_encoding = 'utf-8'
 
-    def run(self, paths=None):
+    def get_encoding(self):
+        return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
+
+    def new_view(self, encoding, text):
+        view = sublime.active_window().new_file()
+        view.set_encoding(encoding)
+        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
+        edit = view.begin_edit()
+        view.insert(edit, 0, text)
+        view.end_edit(edit)
+        view.set_scratch(1)
+
+    def run(self, paths=None, preview=True):
         if not paths:
             return
 
         has_changes = False
+        preview_output = ''
+        encoding = self.get_encoding()
 
         for path in self.file_names:
             fd2, out_path = tempfile.mkstemp(text=True)
             sublime.status_message("autopep8: formatting {path}".format(path=path))
-            self.format_file(path, out_path, preview=False)
+            self.format_file(path, out_path, preview=preview, encoding=encoding)
             in_data = open(path).read()
             out_data = open(out_path).read()
-            if in_data != out_data:
-                has_changes = True
+            print path
+            if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 6):
+                continue
+
+            has_changes = True
+            if not preview:
                 open(path, 'w').write(out_data)
+            else:
+                preview_output += out_data
+
         sublime.status_message("")
+        if has_changes and preview_output:
+            self.new_view(encoding, preview_output.decode(encoding))
         if not has_changes:
             sublime.message_dialog("0 issues to fix")
 
@@ -154,7 +179,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
                     result.append(os.path.join(dirpath, filename))
         return result
 
-    def is_visible(self, paths=None):
+    def is_visible(self, *args, **kwd):
+        paths = kwd.get('paths')
+        if not paths:
+            return False
         files = []
         for path in paths:
             if os.path.isdir(path):

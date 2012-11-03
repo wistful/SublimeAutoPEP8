@@ -1,3 +1,6 @@
 [
-    { "caption": "PEP8: Format Code", "command": "auto_pep8_file", "args": {"paths": []} }
+    {"caption": "-"},
+    { "caption": "PEP8: Format Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": false} },
+    { "caption": "PEP8: Preview Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": true} },
+    {"caption": "-"}
 ]
