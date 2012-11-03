@@ -170,7 +170,8 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
 
     def on_pre_save(self, view):
-        if not sublime.load_settings('AutoPep8.sublime-settings').get('format_on_save', False):
+        if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
+                or not sublime.load_settings('AutoPep8.sublime-settings').get('format_on_save', False):
             return
 
         # save cursor position
