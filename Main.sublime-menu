@@ -17,7 +17,26 @@
                         [
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/AutoPEP8/AutoPep8.sublime-settings"},
+                                "args": {
+                                    "file": "${packages}/AutoPEP8/AutoPep8.sublime-settings",
+                                    "platform": "Linux"
+                                },
+                                "caption": "Settings – Default"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {
+                                    "file": "${packages}/AutoPEP8/AutoPep8.sublime-settings",
+                                    "platform": "OSX"
+                                },
+                                "caption": "Settings – Default"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {
+                                    "file": "${packages}/AutoPEP8/AutoPep8 (Windows).sublime-settings",
+                                    "platform": "Windows"
+                                },
                                 "caption": "Settings – Default"
                             },
                             {
