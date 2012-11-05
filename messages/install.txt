@@ -1,0 +1,18 @@
+Sublime Auto PEP8 Formatting
+
+Automatically formats Python code to conform to the PEP 8 style guide using autopep8 module
+
+Features:
+
+    format / preview code according PEP8
+    format / preview multi-selected text
+    format / preview all python modules in folder
+    side bar menu
+    formated code while saving
+
+AutoPEP8 runs in one of two modes:
+
+    AutoPep8 Format (Command/Control+Shift+F8) - automatically formats code
+    AutoPep8 Preview (Command/Control+F8) - open new tab to preview changes
+
+You can also select mode by mouse right click.
