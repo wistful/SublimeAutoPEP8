@@ -33,8 +33,8 @@ class AutoPep8(object):
         """format/diff code from in_file using autopep8
         and save output in out_file"""
 
-        open(out_file, 'w').write(open(in_file, 'r').read())
              # in_file doesn't change
+        open(out_file, 'w').write(open(in_file, 'r').read())
         settings = sublime.load_settings(base_name)
         params = [settings.get("python", "python"), settings.get(
             "autopep8", "autopep8.py"), out_file]
@@ -58,6 +58,8 @@ class AutoPep8(object):
         open(in_path, 'w').write(text.encode(encoding))
         self.format_file(in_path, out_path, preview, encoding)
         out_data = fd_out.read().decode(encoding)
+        os.remove(in_path)
+        os.remove(out_path)
         return out_data
 
 
@@ -170,8 +172,8 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             self.format_file(
                 path, out_path, preview=preview, encoding=encoding)
             in_data = open(path).read()
-            out_data = open(out_path).read()
-            print path
+            out_data = open(out_path, 'r').read()
+            os.remove(out_path)
             if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 6):
                 continue
 
