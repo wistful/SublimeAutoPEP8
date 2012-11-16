@@ -128,8 +128,10 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             (0.0, 0.0))  # magic, next line doesn't work without it
         self.view.set_viewport_position(vector)
 
-        if not has_changes:
-            sublime.message_dialog("0 issues to fix")
+        if has_changes:
+            sublime.status_message('AutoPEP8: Issues fixed')
+        else:
+            sublime.status_message('AutoPEP8: No issues to fix')
 
     def is_visible(self, *args):
         return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
@@ -183,11 +185,13 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             else:
                 preview_output += out_data.decode('utf-8')
 
-        sublime.status_message("")
-        if has_changes and preview_output:
-            self.new_view('utf-8', preview_output)
-        if not has_changes:
-            sublime.message_dialog("0 issues to fix")
+        if has_changes:
+            if preview_output:
+                self.new_view('utf-8', preview_output)
+            else:
+                sublime.status_message('AutoPEP8: Issues fixed')
+        else:
+            sublime.status_message('AutoPEP8: No issues to fix')
 
     def files(self, path):
         result = []
