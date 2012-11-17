@@ -24,8 +24,8 @@ Once you install Package Control, restart ST2 and bring up the Command Palette (
 
 AutoPEP8 runs in one of two modes:
 
-+ **AutoPep8 Format** (`Command/Control+Shift+F8`) - automatically formats code
-+ **AutoPep8 Preview** (`Command/Control+F8`) - open new tab to preview changes
++ **AutoPep8 Format** (`Command/Control + Shift + 8`) - automatically formats code
++ **AutoPep8 Preview** (`Command/Control + 8`) - open new tab to preview changes
 
 You can also select mode by mouse right click.
 
