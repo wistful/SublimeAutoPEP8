@@ -18,7 +18,7 @@ class AutoPep8(object):
     """AutoPep8 Formatter"""
 
     def pep8_params(self):
-        params = ['-d', '-vv', '-i']  # args for preview
+        params = ['-d', '-vv']  # args for preview
 
         # read settings
         settings = sublime.load_settings(base_name)
@@ -38,13 +38,23 @@ class AutoPep8(object):
         return ''.join(diff)
 
     def format_text(self, text):
+        print "pep8_params: ", self.pep8_params()
         return autopep8.fix_string(text, self.pep8_params())
 
-    def status_message(self, has_changes):
+    def update_status_message(self, has_changes):
         if has_changes:
             sublime.status_message('AutoPEP8: Issues fixed')
         else:
             sublime.status_message('AutoPEP8: No issues to fix')
+
+    def new_view(self, edit, encoding, text):
+        view = sublime.active_window().new_file()
+        view.set_encoding(encoding)
+        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
+        edit = view.begin_edit()
+        view.insert(edit, 0, text)
+        view.end_edit(edit)
+        view.set_scratch(1)
 
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
@@ -58,18 +68,24 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             region = sublime.Region(sel.a, sel.b)
             yield region, self.view.substr(region)
 
-    def new_view(self, edit, encoding, text):
-        view = sublime.active_window().new_file()
-        view.set_encoding(encoding)
-        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-        view.insert(edit, 0, text)
-        view.set_scratch(1)
-
     def save_state(self):
         # save cursor position
         self.cur_row, self.cur_col = self.view.rowcol(self.view.sel()[0].begin())
         # save viewport
         self.vector = self.view.text_to_layout(self.view.visible_region().begin())
+
+    def restore_state(self):
+        # restore cursor position
+        sel = self.view.sel()
+        if len(sel) == 1 and sel[0].a == sel[0].b:
+            cur_point = self.view.text_point(self.cur_row, self.cur_col)
+            sel.subtract(sel[0])
+            sel.add(sublime.Region(cur_point, cur_point))
+
+        # restore viewport
+        self.view.set_viewport_position(
+            (0.0, 0.0))  # magic, next line doesn't work without it
+        self.view.set_viewport_position(self.vector)
 
     def run(self, edit, preview=True):
         preview_output = ''
@@ -88,26 +104,13 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             else:
                 preview_output += self._get_diff(substr, out_data, self.view.file_name())
 
-        self.status_message(has_changes)
+        self.update_status_message(has_changes)
 
         if has_changes and preview_output:
             self.new_view(edit, 'utf-8', preview_output)
             return
 
         self.restore_state()
-
-    def restore_state(self):
-        # restore cursor position
-        sel = self.view.sel()
-        if len(sel) == 1 and sel[0].a == sel[0].b:
-            cur_point = self.view.text_point(self.cur_row, self.cur_col)
-            sel.subtract(sel[0])
-            sel.add(sublime.Region(cur_point, cur_point))
-
-        # restore viewport
-        self.view.set_viewport_position(
-            (0.0, 0.0))  # magic, next line doesn't work without it
-        self.view.set_viewport_position(self.vector)
 
     def is_visible(self, *args):
         return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
@@ -116,15 +119,6 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
     file_names = None
-
-    def new_view(self, encoding, text):
-        view = sublime.active_window().new_file()
-        view.set_encoding(encoding)
-        view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-        edit = view.begin_edit()
-        view.insert(edit, 0, text)
-        view.end_edit(edit)
-        view.set_scratch(1)
 
     def run(self, paths=None, preview=True):
         if not paths:
