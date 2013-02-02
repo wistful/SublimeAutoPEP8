@@ -10,8 +10,8 @@
             "platforms": {
                 "*": [
                     {
-                        "version": "0.8",
-                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/legacy.zip/v0.8"
+                        "version": "0.9",
+                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/legacy.zip/v0.9"
                     }
                 ]
             }
