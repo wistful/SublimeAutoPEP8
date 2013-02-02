@@ -17,10 +17,8 @@ base_name = sublime.platform() == 'windows' and 'AutoPep8 (Windows).sublime-sett
 class AutoPep8(object):
     """AutoPep8 Formatter"""
 
-    def pep8_params(self, preview=True):
-        params = ['-d', '-vv']  # args for preview
-        if not preview:
-            params = ['-i']  # args for format
+    def pep8_params(self):
+        params = ['-d', '-vv', '-i']  # args for preview
 
         # read settings
         settings = sublime.load_settings(base_name)
@@ -29,7 +27,7 @@ class AutoPep8(object):
         if settings.get("select"):
             params.append("--select=" + settings.get("select"))
 
-        params.append('fake-arg')
+        params.append('fake-arg')  # autopep8.parse_args raises exception without it
         return autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
@@ -40,7 +38,7 @@ class AutoPep8(object):
         return ''.join(diff)
 
     def format_text(self, text):
-        return autopep8.fix_string(text, self.pep8_params(preview=False))
+        return autopep8.fix_string(text, self.pep8_params())
 
     def status_message(self, has_changes):
         if has_changes:
