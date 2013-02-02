@@ -1,12 +1,12 @@
 ## coding=utf-8
 import sublime
 import sublime_plugin
-import tempfile
-import subprocess
 import os
 from collections import namedtuple
 import re
-import locale
+import autopep8
+import difflib
+from StringIO import StringIO
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
@@ -27,42 +27,19 @@ class AutoPep8(object):
             params.append("--ignore=" + settings.get("ignore"))
         if settings.get("select"):
             params.append("--select=" + settings.get("select"))
-        return params
 
-    def format_file(self, in_file, out_file, preview=True, encoding='utf-8'):
-        """format/diff code from in_file using autopep8
-        and save output in out_file"""
+        params.append('fake-arg')
+        return autopep8.parse_args(params)[0]
 
-             # in_file doesn't change
-        open(out_file, 'w').write(open(in_file, 'r').read())
-        settings = sublime.load_settings(base_name)
-        params = [settings.get("python", "python"), settings.get(
-            "autopep8", "autopep8.py"), out_file]
-        params.extend(self.pep8_params(preview))
-        print 'autopep8:', repr(params)
-        p = subprocess.Popen(params, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, cwd=plugin_path)
-        if preview:
-            # write diff to out_file
-            l_encoding = locale.getpreferredencoding()
-            output = p.stdout.read().decode(l_encoding)
-            output = output.replace(out_file, in_file)
-            open(out_file, 'w').write(output.encode('utf-8'))
-        for line in p.stderr:
-            print line
+    def _get_diff(self, old, new, filename):
+        diff = difflib.unified_diff(
+            StringIO(old).readlines(), StringIO(new).readlines(),
+            'original:' + filename,
+            'fixed:' + filename)
+        return ''.join(diff)
 
-    def format_text(self, text, encoding, preview=True):
-        fd1, in_path = tempfile.mkstemp(text=True)
-        fd2, out_path = tempfile.mkstemp(text=True)
-        fd_in, fd_out = os.fdopen(fd1, 'w'), os.fdopen(fd2)
-        open(in_path, 'w').write(text.encode(encoding))
-        self.format_file(in_path, out_path, preview, encoding)
-        out_data = fd_out.read().decode(encoding)
-        fd_in.close()
-        os.remove(in_path)
-        fd_out.close()
-        os.remove(out_path)
-        return out_data
+    def format_text(self, text):
+        return autopep8.fix_string(text, self.pep8_params(preview=False))
 
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
@@ -92,48 +69,49 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         view.insert(edit, 0, text)
         view.set_scratch(1)
 
-    def run(self, edit, preview=True):
-        encoding = self.get_encoding()
-        preview_output = ''
+    def save_state(self):
+        # save cursor position
+        self.cur_row, self.cur_col = self.view.rowcol(self.view.sel()[0].begin())
+        # save viewport
+        self.vector = self.view.text_to_layout(self.view.visible_region().begin())
 
+    def run(self, edit, preview=True):
+        preview_output = ''
         has_changes = False
 
-        # save cursor position
-        cur_row, cur_col = self.view.rowcol(self.view.sel()[0].begin())
-
-        # save viewport
-        vector = self.view.text_to_layout(self.view.visible_region().begin())
-
         for region, substr in self.sel():
-            out_data = self.format_text(substr, encoding, preview)
-            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 6):
+            out_data = self.format_text(substr)
+            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
                 continue
 
             has_changes = True
             if not preview:
                 self.view.replace(edit, region, out_data)
             else:
-                preview_output += out_data
+                preview_output += self._get_diff(substr, out_data, self.view.file_name())
+
+        if has_changes:
+            sublime.status_message('AutoPEP8: Issues fixed')
+        else:
+            sublime.status_message('AutoPEP8: No issues to fix')
+            return
 
         if has_changes and preview_output:
             self.new_view(edit, 'utf-8', preview_output)
+            return
 
+    def restore_state(self):
         # restore cursor position
         sel = self.view.sel()
         if len(sel) == 1 and sel[0].a == sel[0].b:
-            cur_point = self.view.text_point(cur_row, cur_col)
+            cur_point = self.view.text_point(self.cur_row, self.cur_col)
             sel.subtract(sel[0])
             sel.add(sublime.Region(cur_point, cur_point))
 
         # restore viewport
         self.view.set_viewport_position(
             (0.0, 0.0))  # magic, next line doesn't work without it
-        self.view.set_viewport_position(vector)
-
-        if has_changes:
-            sublime.status_message('AutoPEP8: Issues fixed')
-        else:
-            sublime.status_message('AutoPEP8: No issues to fix')
+        self.view.set_viewport_position(self.vector)
 
     def is_visible(self, *args):
         return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
@@ -169,15 +147,12 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
         preview_output = ''
 
         for path in self.file_names:
-            encoding = self.get_encoding(path)
-            fd2, out_path = tempfile.mkstemp(text=True)
+            # encoding = self.get_encoding(path)
+            in_data = open(path, 'r').read()
+            out_data = self.format_text(in_data)
             sublime.status_message(
                 "autopep8: formatting {path}".format(path=path))
-            self.format_file(
-                path, out_path, preview=preview, encoding=encoding)
-            in_data = open(path).read()
-            out_data = open(out_path, 'r').read()
-            os.remove(out_path)
+
             if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 6):
                 continue
 
@@ -185,7 +160,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             if not preview:
                 open(path, 'w').write(out_data)
             else:
-                preview_output += out_data.decode('utf-8')
+                preview_output += self._get_diff(in_data, out_data, path)
 
         if has_changes:
             if preview_output:
@@ -234,17 +209,15 @@ class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
         if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
                 or not sublime.load_settings(base_name).get('format_on_save', False):
             return
-
         # save cursor position
         cur_row, cur_col = view.rowcol(view.sel()[0].begin())
 
         # save viewport
         vector = view.text_to_layout(view.visible_region().begin())
 
-        encoding = self.get_encoding(view)
         region = sublime.Region(0, view.size())
         source = view.substr(region)
-        out_data = self.format_text(source, encoding, preview=False)
+        out_data = self.format_text(source)
         if out_data != source:
             edit = view.begin_edit()
             view.replace(edit, region, out_data)
