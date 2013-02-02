@@ -6,12 +6,12 @@
             "description": "Automatically formats Python code to conform to the PEP 8 style guide using autopep8.py module",
             "author": "wistful",
             "homepage": "https://github.com/wistful/SublimeAutoPEP8",
-            "last_modified": "2012-11-17 22:07:09",
+            "last_modified": "2013-02-02 21:46:13",
             "platforms": {
                 "*": [
                     {
-                        "version": "0.7.2",
-                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/legacy.zip/v0.7.2"
+                        "version": "0.8",
+                        "url": "https://nodeload.github.com/wistful/SublimeAutoPEP8/legacy.zip/v0.8"
                     }
                 ]
             }
