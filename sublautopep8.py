@@ -1,12 +1,13 @@
 ## coding=utf-8
-import sublime
-import sublime_plugin
 import os
 from collections import namedtuple
 import re
-import autopep8
 import difflib
 from StringIO import StringIO
+
+import sublime
+import sublime_plugin
+import autopep8
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
@@ -41,6 +42,13 @@ class AutoPep8(object):
     def format_text(self, text):
         return autopep8.fix_string(text, self.pep8_params(preview=False))
 
+    def status_message(self, has_changes):
+        if has_changes:
+            sublime.status_message('AutoPEP8: Issues fixed')
+        else:
+            sublime.status_message('AutoPEP8: No issues to fix')
+            return
+
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
@@ -52,15 +60,6 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         for sel in sels:
             region = sublime.Region(sel.a, sel.b)
             yield region, self.view.substr(region)
-
-    def get_encoding(self):
-        encoding = self.view.encoding()
-        if encoding and encoding != 'Undefined':
-            return encoding
-        try:
-            return pycoding.search(self.view.substr(sublime.Region(0, self.view.size()))).group(1)
-        except (AttributeError, IndexError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
 
     def new_view(self, edit, encoding, text):
         view = sublime.active_window().new_file()
@@ -79,6 +78,8 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         preview_output = ''
         has_changes = False
 
+        self.save_state()
+
         for region, substr in self.sel():
             out_data = self.format_text(substr)
             if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
@@ -90,15 +91,13 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             else:
                 preview_output += self._get_diff(substr, out_data, self.view.file_name())
 
-        if has_changes:
-            sublime.status_message('AutoPEP8: Issues fixed')
-        else:
-            sublime.status_message('AutoPEP8: No issues to fix')
-            return
+        self.status_message(has_changes)
 
         if has_changes and preview_output:
             self.new_view(edit, 'utf-8', preview_output)
             return
+
+        self.restore_state()
 
     def restore_state(self):
         # restore cursor position
@@ -120,15 +119,6 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
     file_names = None
-    default_encoding = 'utf-8'
-
-    def get_encoding(self, path):
-        try:
-            with open(path, 'r') as f:
-                file_head = f.readline() + f.readline()
-            return pycoding.search(file_head).group(1)
-        except (AttributeError, IndexError, IOError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
 
     def new_view(self, encoding, text):
         view = sublime.active_window().new_file()
@@ -195,15 +185,6 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
 
 class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
-
-    def get_encoding(self, view):
-        encoding = view.encoding()
-        if encoding and encoding != 'Undefined':
-            return encoding
-        try:
-            return pycoding.search(view.substr(sublime.Region(0, view.size()))).group(1)
-        except (AttributeError, IndexError):
-            return sublime.load_settings('Preferences.sublime-settings').get('default_encoding', 'utf-8')
 
     def on_pre_save(self, view):
         if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
