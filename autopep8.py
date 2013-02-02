@@ -42,18 +42,7 @@ from subprocess import Popen, PIPE
 import difflib
 import tempfile
 
-from distutils.version import StrictVersion
-try:
-    import pep8
-    try:
-        if StrictVersion(pep8.__version__) < StrictVersion('1.3a2'):
-            pep8 = None
-    except ValueError:
-        # Ignore non-standard version tags.
-        pass
-except ImportError:
-    pep8 = None
-
+import pep8
 
 __version__ = '0.8.6'
 
