@@ -47,7 +47,7 @@ class AutoPep8(object):
         else:
             sublime.status_message('AutoPEP8: No issues to fix')
 
-    def new_view(self, edit, encoding, text):
+    def new_view(self, encoding, text):
         view = sublime.active_window().new_file()
         view.set_encoding(encoding)
         view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
@@ -107,7 +107,7 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         self.update_status_message(has_changes)
 
         if has_changes and preview_output:
-            self.new_view(edit, 'utf-8', preview_output)
+            self.new_view('utf-8', preview_output)
             return
 
         self.restore_state()
@@ -128,13 +128,12 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
         preview_output = ''
 
         for path in self.file_names:
-            # encoding = self.get_encoding(path)
             in_data = open(path, 'r').read()
             out_data = self.format_text(in_data)
             sublime.status_message(
                 "autopep8: formatting {path}".format(path=path))
 
-            if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 6):
+            if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 3):
                 continue
 
             has_changes = True
@@ -143,13 +142,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             else:
                 preview_output += self._get_diff(in_data, out_data, path)
 
-        if has_changes:
-            if preview_output:
-                self.new_view('utf-8', preview_output)
-            else:
-                sublime.status_message('AutoPEP8: Issues fixed')
-        else:
-            sublime.status_message('AutoPEP8: No issues to fix')
+        self.update_status_message(has_changes)
+
+        if has_changes and preview_output:
+            self.new_view('utf-8', preview_output)
 
     def files(self, path):
         result = []
