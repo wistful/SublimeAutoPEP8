@@ -58,9 +58,9 @@ class AutoPep8(object):
         open(in_path, 'w').write(text.encode(encoding))
         self.format_file(in_path, out_path, preview, encoding)
         out_data = fd_out.read().decode(encoding)
-        os.close(fd1)
+        fd_in.close()
         os.remove(in_path)
-        os.close(fd2)
+        fd_out.close()
         os.remove(out_path)
         return out_data
 

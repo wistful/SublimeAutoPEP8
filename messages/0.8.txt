@@ -1,0 +1,4 @@
+AutoPEP8 0.8 Changelog:
+* fixed issue with exception while removing open file
+* update pep8.py to version 1.4.2a0
+* update autopep8.py to version 0.8.6
