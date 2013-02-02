@@ -45,7 +45,6 @@ class AutoPep8(object):
             sublime.status_message('AutoPEP8: Issues fixed')
         else:
             sublime.status_message('AutoPEP8: No issues to fix')
-            return
 
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
