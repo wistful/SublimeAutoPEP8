@@ -1,0 +1,2 @@
+AutoPEP8 0.9 Changelog:
+* fix conflicts with SublimeLinter plugin

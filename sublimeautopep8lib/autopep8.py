@@ -42,7 +42,9 @@ from subprocess import Popen, PIPE
 import difflib
 import tempfile
 
-import pep8
+import sublimeautopep8lib
+
+import sublimeautopep8lib.pep8
 
 __version__ = '0.8.6'
 
@@ -208,7 +210,7 @@ class FixPEP8(object):
 
     def fix(self):
         """Return a version of the source code with PEP 8 violations fixed."""
-        if pep8:
+        if sublimeautopep8lib.pep8:
             pep8_options = {
                 'ignore': self.options.ignore,
                 'select': self.options.select,
@@ -238,7 +240,7 @@ class FixPEP8(object):
                                       length=self.options.max_line_length)]
                                    if self.options.max_line_length else []) +
                                   [tmp_filename])
-            if not pep8:
+            if not sublimeautopep8lib.pep8:
                 os.remove(tmp_filename)
 
         if self.options.verbose:
@@ -1135,7 +1137,7 @@ def _spawn_pep8(pep8_options):
 
 def _execute_pep8(pep8_options, source):
     """Execute pep8 via python method calls."""
-    class QuietReport(pep8.BaseReport):
+    class QuietReport(sublimeautopep8lib.pep8.BaseReport):
 
         """Version of checker that does not print."""
 
@@ -1162,8 +1164,8 @@ def _execute_pep8(pep8_options, source):
             """
             return self.__full_error_results
 
-    checker = pep8.Checker('', lines=source,
-                           reporter=QuietReport, **pep8_options)
+    checker = sublimeautopep8lib.pep8.Checker('', lines=source,
+                                              reporter=QuietReport, **pep8_options)
     checker.check_all()
     return checker.report.full_error_results()
 
