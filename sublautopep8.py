@@ -7,7 +7,7 @@ from StringIO import StringIO
 
 import sublime
 import sublime_plugin
-import autopep8
+import sublimeautopep8lib.autopep8
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
@@ -28,7 +28,7 @@ class AutoPep8(object):
             params.append("--select=" + settings.get("select"))
 
         params.append('fake-arg')  # autopep8.parse_args raises exception without it
-        return autopep8.parse_args(params)[0]
+        return sublimeautopep8lib.autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
         diff = difflib.unified_diff(
@@ -38,8 +38,8 @@ class AutoPep8(object):
         return ''.join(diff)
 
     def format_text(self, text):
-        print "pep8_params: ", self.pep8_params()
-        return autopep8.fix_string(text, self.pep8_params())
+        print("SublimeAutoPEP8: pep8_params={0}".format(self.pep8_params()))
+        return sublimeautopep8lib.autopep8.fix_string(text, self.pep8_params())
 
     def update_status_message(self, has_changes):
         if has_changes:
