@@ -11,11 +11,12 @@ import sublime_plugin
 
 # Using the external module loading trick from wbond's sublime_alignment
 try:
-    from sublimeautopep8lib import autopep8
+    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
 except ImportError:
-    sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8'))
+    sys.path.append(os.path.join(sublime.packages_path(), 'AutoPEP8'))
     autopep8 = __import__('sublimeautopep8lib.autopep8')
-    # reload(autopep8)
+    from imp import reload
+    reload(autopep8)
     del sys.path[-1]
 
 
@@ -37,8 +38,7 @@ class AutoPep8(object):
         if settings.get("select"):
             params.append("--select=" + settings.get("select"))
 
-        params.append(
-            'fake-arg')  # autopep8.parse_args raises exception without it
+        params.append('fake-arg')  # autopep8.parse_args raises exception without it
         return autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
