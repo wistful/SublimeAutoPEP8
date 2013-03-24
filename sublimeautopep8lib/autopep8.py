@@ -42,16 +42,19 @@ from subprocess import Popen, PIPE
 import difflib
 import tempfile
 
-# Using the external module loading trick from wbond's sublime_alignment
-try:
-    import AutoPEP8.sublimeautopep8lib.pep8 as pep8_module
-except ImportError:
-    import sublime
-    sys.path.append(os.path.join(sublime.packages_path(), 'AutoPEP8'))
-    pep8_module = __import__('sublimeautopep8lib.pep8')
-    from imp import reload
-    reload(pep8_module)
-    del sys.path[-1]
+import sublime
+if int(sublime.version()) > 3000:
+    try:
+        import AutoPEP8.sublimeautopep8lib.pep8 as pep8_module
+    except ImportError:
+        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPEP8'))
+        pep8_module = __import__('sublimeautopep8lib.pep8')
+        from imp import reload
+        reload(pep8_module)
+        del sys.path[-1]
+else:
+    import sublimeautopep8lib.pep8 as pep8_module
+
 
 __version__ = '0.8.6'
 

@@ -1,23 +1,27 @@
 ## coding=utf-8
 import os
-import sys
 from collections import namedtuple
 import re
 import difflib
-from io import StringIO
 
 import sublime
 import sublime_plugin
 
-# Using the external module loading trick from wbond's sublime_alignment
-try:
-    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
-except ImportError:
-    sys.path.append(os.path.join(sublime.packages_path(), 'AutoPEP8'))
-    autopep8 = __import__('sublimeautopep8lib.autopep8')
+if int(sublime.version()) > 3000:
+    import sys
+    from io import StringIO
     from imp import reload
-    reload(autopep8)
-    del sys.path[-1]
+
+    try:
+        from AutoPEP8.sublimeautopep8lib import autopep8
+    except ImportError:
+        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8'))
+        autopep8 = __import__('sublimeautopep8lib.autopep8')
+        reload(autopep8)
+        del sys.path[-1]
+else:
+    from StringIO import StringIO
+    import sublimeautopep8lib.autopep8 as autopep8
 
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
