@@ -42,9 +42,19 @@ from subprocess import Popen, PIPE
 import difflib
 import tempfile
 
-import sublimeautopep8lib
+import sublime
+if int(sublime.version()) > 3000:
+    try:
+        import AutoPEP8.sublimeautopep8lib.pep8 as pep8_module
+    except ImportError:
+        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPEP8', 'sublimeautopep8lib'))
+        pep8_module = __import__('pep8')
+        from imp import reload
+        reload(pep8_module)
+        del sys.path[-1]
+else:
+    import sublimeautopep8lib.pep8 as pep8_module
 
-import sublimeautopep8lib.pep8
 
 __version__ = '0.8.6'
 
@@ -210,7 +220,7 @@ class FixPEP8(object):
 
     def fix(self):
         """Return a version of the source code with PEP 8 violations fixed."""
-        if sublimeautopep8lib.pep8:
+        if pep8_module:
             pep8_options = {
                 'ignore': self.options.ignore,
                 'select': self.options.select,
@@ -240,7 +250,7 @@ class FixPEP8(object):
                                       length=self.options.max_line_length)]
                                    if self.options.max_line_length else []) +
                                   [tmp_filename])
-            if not sublimeautopep8lib.pep8:
+            if not pep8_module:
                 os.remove(tmp_filename)
 
         if self.options.verbose:
@@ -1137,7 +1147,7 @@ def _spawn_pep8(pep8_options):
 
 def _execute_pep8(pep8_options, source):
     """Execute pep8 via python method calls."""
-    class QuietReport(sublimeautopep8lib.pep8.BaseReport):
+    class QuietReport(pep8_module.BaseReport):
 
         """Version of checker that does not print."""
 
@@ -1164,7 +1174,7 @@ def _execute_pep8(pep8_options, source):
             """
             return self.__full_error_results
 
-    checker = sublimeautopep8lib.pep8.Checker('', lines=source,
+    checker = pep8_module.Checker('', lines=source,
                                               reporter=QuietReport, **pep8_options)
     checker.check_all()
     return checker.report.full_error_results()

@@ -3,11 +3,26 @@ import os
 from collections import namedtuple
 import re
 import difflib
-from StringIO import StringIO
 
 import sublime
 import sublime_plugin
-import sublimeautopep8lib.autopep8
+
+if int(sublime.version()) > 3000:
+    import sys
+    from io import StringIO
+    from imp import reload
+
+    try:
+        from AutoPEP8.sublimeautopep8lib import autopep8
+    except ImportError:
+        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8', 'sublimeautopep8lib'))
+        autopep8 = __import__('autopep8')
+        reload(autopep8)
+        del sys.path[-1]
+else:
+    from StringIO import StringIO
+    import sublimeautopep8lib.autopep8 as autopep8
+
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
@@ -28,7 +43,7 @@ class AutoPep8(object):
             params.append("--select=" + settings.get("select"))
 
         params.append('fake-arg')  # autopep8.parse_args raises exception without it
-        return sublimeautopep8lib.autopep8.parse_args(params)[0]
+        return autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
         diff = difflib.unified_diff(
@@ -39,7 +54,7 @@ class AutoPep8(object):
 
     def format_text(self, text):
         print("SublimeAutoPEP8: pep8_params={0}".format(self.pep8_params()))
-        return sublimeautopep8lib.autopep8.fix_string(text, self.pep8_params())
+        return autopep8.fix_string(text, self.pep8_params())
 
     def update_status_message(self, has_changes):
         if has_changes:
@@ -70,9 +85,11 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
     def save_state(self):
         # save cursor position
-        self.cur_row, self.cur_col = self.view.rowcol(self.view.sel()[0].begin())
+        self.cur_row, self.cur_col = self.view.rowcol(
+            self.view.sel()[0].begin())
         # save viewport
-        self.vector = self.view.text_to_layout(self.view.visible_region().begin())
+        self.vector = self.view.text_to_layout(
+            self.view.visible_region().begin())
 
     def restore_state(self):
         # restore cursor position
@@ -102,7 +119,8 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             if not preview:
                 self.view.replace(edit, region, out_data)
             else:
-                preview_output += self._get_diff(substr, out_data, self.view.file_name())
+                preview_output += self._get_diff(
+                    substr, out_data, self.view.file_name())
 
         self.update_status_message(has_changes)
 
