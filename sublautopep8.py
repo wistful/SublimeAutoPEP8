@@ -15,8 +15,8 @@ if int(sublime.version()) > 3000:
     try:
         from AutoPEP8.sublimeautopep8lib import autopep8
     except ImportError:
-        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8'))
-        autopep8 = __import__('sublimeautopep8lib.autopep8')
+        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8', 'sublimeautopep8lib'))
+        autopep8 = __import__('autopep8')
         reload(autopep8)
         del sys.path[-1]
 else:
