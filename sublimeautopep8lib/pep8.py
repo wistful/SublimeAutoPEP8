@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # pep8.py - Check Python source code formatting, according to PEP 8
 # Copyright (C) 2006-2009 Johann C. Rocholl <johann@rocholl.net>
-# Copyright (C) 2009-2012 Florent Xicluna <florent.xicluna@gmail.com>
+# Copyright (C) 2009-2013 Florent Xicluna <florent.xicluna@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -45,7 +45,7 @@ W warnings
 700 statements
 900 syntax error
 """
-__version__ = '1.4.2a0'
+__version__ = '1.4.6a0'
 
 import os
 import sys
@@ -62,14 +62,15 @@ try:
 except ImportError:
     from ConfigParser import RawConfigParser
 
-DEFAULT_EXCLUDE = '.svn,CVS,.bzr,.hg,.git'
+DEFAULT_EXCLUDE = '.svn,CVS,.bzr,.hg,.git,__pycache__'
 DEFAULT_IGNORE = 'E226,E24'
 if sys.platform == 'win32':
     DEFAULT_CONFIG = os.path.expanduser(r'~\.pep8')
 else:
     DEFAULT_CONFIG = os.path.join(os.getenv('XDG_CONFIG_HOME') or
                                   os.path.expanduser('~/.config'), 'pep8')
-PROJECT_CONFIG = ('.pep8', 'tox.ini', 'setup.cfg')
+PROJECT_CONFIG = ('setup.cfg', 'tox.ini', '.pep8')
+TESTSUITE_PATH = os.path.join(os.path.dirname(__file__), 'testsuite')
 MAX_LINE_LENGTH = 79
 REPORT_FORMAT = {
     'default': '%(path)s:%(row)d:%(col)d: %(code)s %(text)s',
@@ -80,29 +81,27 @@ PyCF_ONLY_AST = 1024
 SINGLETONS = frozenset(['False', 'None', 'True'])
 KEYWORDS = frozenset(keyword.kwlist + ['print']) - SINGLETONS
 UNARY_OPERATORS = frozenset(['>>', '**', '*', '+', '-'])
-WS_OPTIONAL_OPERATORS = frozenset(['**', '*', '/', '//', '+', '-'])
+ARITHMETIC_OP = frozenset(['**', '*', '/', '//', '+', '-'])
+WS_OPTIONAL_OPERATORS = ARITHMETIC_OP.union(['^', '&', '|', '<<', '>>', '%'])
 WS_NEEDED_OPERATORS = frozenset([
-    '**=', '*=', '/=', '//=', '+=', '-=', '!=', '<>',
-    '%=', '^=', '&=', '|=', '==', '<=', '>=', '<<=', '>>=',
-    '%',  '^',  '&',  '|',  '=',  '<',  '>',  '<<'])
+    '**=', '*=', '/=', '//=', '+=', '-=', '!=', '<>', '<', '>',
+    '%=', '^=', '&=', '|=', '==', '<=', '>=', '<<=', '>>=', '='])
 WHITESPACE = frozenset(' \t')
 SKIP_TOKENS = frozenset([tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE,
                          tokenize.INDENT, tokenize.DEDENT])
 BENCHMARK_KEYS = ['directories', 'files', 'logical lines', 'physical lines']
 
 INDENT_REGEX = re.compile(r'([ \t]*)')
-RAISE_COMMA_REGEX = re.compile(r'raise\s+\w+\s*(,)')
+RAISE_COMMA_REGEX = re.compile(r'raise\s+\w+\s*,')
 RERAISE_COMMA_REGEX = re.compile(r'raise\s+\w+\s*,\s*\w+\s*,\s*\w+')
-SELFTEST_REGEX = re.compile(r'(Okay|[EW]\d{3}):\s(.*)')
-ERRORCODE_REGEX = re.compile(r'[EW]\d{3}')
+ERRORCODE_REGEX = re.compile(r'\b[A-Z]\d{3}\b')
 DOCSTRING_REGEX = re.compile(r'u?r?["\']')
 EXTRANEOUS_WHITESPACE_REGEX = re.compile(r'[[({] | []}),;:]')
 WHITESPACE_AFTER_COMMA_REGEX = re.compile(r'[,;:]\s*(?:  |\t)')
 COMPARE_SINGLETON_REGEX = re.compile(r'([=!]=)\s*(None|False|True)')
-COMPARE_TYPE_REGEX = re.compile(r'([=!]=|is|is\s+not)\s*type(?:s\.(\w+)Type'
-                                r'|\(\s*(\(\s*\)|[^)]*[^ )])\s*\))')
-KEYWORD_REGEX = re.compile(r'(?:[^\s]|\b)(\s*)\b(?:%s)\b(\s*)' %
-                           r'|'.join(KEYWORDS))
+COMPARE_TYPE_REGEX = re.compile(r'(?:[=!]=|is(?:\s+not)?)\s*type(?:s.\w+Type'
+                                r'|\s*\(\s*([^)]*[^ )])\s*\))')
+KEYWORD_REGEX = re.compile(r'(\s*)\b(?:%s)\b(\s*)' % r'|'.join(KEYWORDS))
 OPERATOR_REGEX = re.compile(r'(?:[^,\s])(\s*)(?:[-+*/|!<=>%&^]+)(\s*)')
 LAMBDA_REGEX = re.compile(r'\blambda\b')
 HUNK_REGEX = re.compile(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@.*$')
@@ -216,9 +215,7 @@ def maximum_line_length(physical_line, max_line_length):
     """
     line = physical_line.rstrip()
     length = len(line)
-    if length > max_line_length:
-        if noqa(line):
-            return
+    if length > max_line_length and not noqa(line):
         if hasattr(line, 'decode'):   # Python 2
             # The line could contain multi-byte characters
             try:
@@ -257,7 +254,7 @@ def blank_lines(logical_line, blank_lines, indent_level, line_number,
     E303: def a():\n\n\n\n    pass
     E304: @decorator\n\ndef a():\n    pass
     """
-    if line_number == 1:
+    if line_number < 3 and not previous_logical:
         return  # Don't expect blank lines before the first line
     if previous_logical.startswith('@'):
         if blank_lines:
@@ -384,7 +381,7 @@ def indentation(logical_line, previous_logical, indent_char,
         yield 0, "E113 unexpected indentation"
 
 
-def continuation_line_indentation(logical_line, tokens, indent_level, verbose):
+def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
     r"""
     Continuation lines should align wrapped elements either vertically using
     Python's implicit line joining inside parentheses, brackets and braces, or
@@ -412,7 +409,7 @@ def continuation_line_indentation(logical_line, tokens, indent_level, verbose):
     """
     first_row = tokens[0][2][0]
     nrows = 1 + tokens[-1][2][0] - first_row
-    if nrows == 1:
+    if noqa or nrows == 1:
         return
 
     # indent_next tells us whether the next block is indented; assuming
@@ -427,15 +424,13 @@ def continuation_line_indentation(logical_line, tokens, indent_level, verbose):
     # relative indents of physical lines
     rel_indent = [0] * nrows
     # visual indents
-    indent = [indent_level]
     indent_chances = {}
     last_indent = tokens[0][2]
+    indent = [last_indent[1]]
     if verbose >= 3:
         print(">>> " + tokens[0][4].rstrip())
 
     for token_type, text, start, end, line in tokens:
-        if noqa(line):
-            continue
 
         newline = row < start[0] - first_row
         if newline:
@@ -450,7 +445,7 @@ def continuation_line_indentation(logical_line, tokens, indent_level, verbose):
                 print("... " + line.rstrip())
 
             # record the initial indent.
-            rel_indent[row] = start[1] - indent_level
+            rel_indent[row] = expand_indent(line) - indent_level
 
             if depth:
                 # a bracket expression in a continuation line.
@@ -510,6 +505,9 @@ def continuation_line_indentation(logical_line, tokens, indent_level, verbose):
         elif (token_type in (tokenize.STRING, tokenize.COMMENT) or
               text in ('u', 'ur', 'b', 'br')):
             indent_chances[start[1]] = str
+        # special case for the "if" statement because len("if (") == 4
+        elif not indent_chances and not row and not depth and text == 'if':
+            indent_chances[end[1] + 1] = True
 
         # keep track of bracket depth
         if token_type == tokenize.OP:
@@ -565,11 +563,9 @@ def whitespace_before_parameters(logical_line, tokens):
     E211: dict ['key'] = list[index]
     E211: dict['key'] = list [index]
     """
-    prev_type = tokens[0][0]
-    prev_text = tokens[0][1]
-    prev_end = tokens[0][3]
+    prev_type, prev_text, __, prev_end, __ = tokens[0]
     for index in range(1, len(tokens)):
-        token_type, text, start, end, line = tokens[index]
+        token_type, text, start, end, __ = tokens[index]
         if (token_type == tokenize.OP and
             text in '([' and
             start != prev_end and
@@ -626,25 +622,16 @@ def missing_whitespace_around_operator(logical_line, tokens):
     Okay: hypot2 = x * x + y * y
     Okay: c = (a + b) * (a - b)
     Okay: foo(bar, key='word', *args, **kwargs)
-    Okay: baz(**kwargs)
-    Okay: negative = -1
-    Okay: spam(-1)
     Okay: alpha[:-i]
-    Okay: if not -5 < x < +5:\n    pass
-    Okay: lambda *args, **kw: (args, kw)
-    Okay: z = 2 ** 30
-    Okay: x = x / 2 - 1
 
     E225: i=i+1
     E225: submitted +=1
-    E225: c = alpha -4
     E225: x = x /2 - 1
     E225: z = x **y
     E226: c = (a+b) * (a-b)
-    E226: z = 2**30
-    E226: x = x*2 - 1
-    E226: x = x/2 - 1
     E226: hypot2 = x*x + y*y
+    E227: c = a|b
+    E228: msg = fmt%(errno, errmsg)
     """
     parens = 0
     need_space = False
@@ -674,8 +661,13 @@ def missing_whitespace_around_operator(logical_line, tokens):
                     # A needed trailing space was not found
                     yield prev_end, "E225 missing whitespace around operator"
                 else:
-                    yield (need_space[0],
-                           "E226 missing optional whitespace around operator")
+                    code, optype = 'E226', 'arithmetic'
+                    if prev_text == '%':
+                        code, optype = 'E228', 'modulo'
+                    elif prev_text not in ARITHMETIC_OP:
+                        code, optype = 'E227', 'bitwise or shift'
+                    yield (need_space[0], "%s missing whitespace "
+                           "around %s operator" % (code, optype))
                 need_space = False
         elif token_type == tokenize.OP and prev_end is not None:
             if text == '=' and parens:
@@ -695,10 +687,7 @@ def missing_whitespace_around_operator(logical_line, tokens):
                     binary_usage = (prev_type not in SKIP_TOKENS)
 
                 if binary_usage:
-                    if text in WS_OPTIONAL_OPERATORS:
-                        need_space = None
-                    else:
-                        need_space = True
+                    need_space = None
             elif text in WS_OPTIONAL_OPERATORS:
                 need_space = None
 
@@ -755,12 +744,12 @@ def whitespace_around_named_parameter_equals(logical_line, tokens):
     parens = 0
     no_space = False
     prev_end = None
+    message = "E251 unexpected spaces around keyword / parameter equals"
     for token_type, text, start, end, line in tokens:
         if no_space:
             no_space = False
             if start != prev_end:
-                yield (prev_end,
-                       "E251 no spaces around keyword / parameter equals")
+                yield (prev_end, message)
         elif token_type == tokenize.OP:
             if text == '(':
                 parens += 1
@@ -769,8 +758,7 @@ def whitespace_around_named_parameter_equals(logical_line, tokens):
             elif parens and text == '=':
                 no_space = True
                 if start != prev_end:
-                    yield (prev_end,
-                           "E251 no spaces around keyword / parameter equals")
+                    yield (prev_end, message)
         prev_end = end
 
 
@@ -902,7 +890,7 @@ def explicit_line_join(logical_line, tokens):
                 parens -= 1
 
 
-def comparison_to_singleton(logical_line):
+def comparison_to_singleton(logical_line, noqa):
     """
     Comparisons to singletons like None should always be done
     with "is" or "is not", never the equality operators.
@@ -916,7 +904,7 @@ def comparison_to_singleton(logical_line):
     set to some other value.  The other value might have a type (such as a
     container) that could be false in a boolean context!
     """
-    match = COMPARE_SINGLETON_REGEX.search(logical_line)
+    match = not noqa and COMPARE_SINGLETON_REGEX.search(logical_line)
     if match:
         same = (match.group(1) == '==')
         singleton = match.group(2)
@@ -949,10 +937,10 @@ def comparison_type(logical_line):
     """
     match = COMPARE_TYPE_REGEX.search(logical_line)
     if match:
-        inst = match.group(3)
+        inst = match.group(1)
         if inst and isidentifier(inst) and inst not in SINGLETONS:
             return  # Allow comparison for types which are not obvious
-        yield match.start(1), "E721 do not compare types, use 'isinstance()'"
+        yield match.start(), "E721 do not compare types, use 'isinstance()'"
 
 
 def python_3000_has_key(logical_line):
@@ -983,7 +971,7 @@ def python_3000_raise_comma(logical_line):
     """
     match = RAISE_COMMA_REGEX.match(logical_line)
     if match and not RERAISE_COMMA_REGEX.match(logical_line):
-        yield match.start(1), "W602 deprecated form of raising exception"
+        yield match.end() - 1, "W602 deprecated form of raising exception"
 
 
 def python_3000_not_equal(logical_line):
@@ -1050,6 +1038,7 @@ else:
     def stdin_get_value():
         return TextIOWrapper(sys.stdin.buffer, errors='ignore').read()
 readlines.__doc__ = "    Read the source code."
+noqa = re.compile(r'# no(?:qa|pep8)\b', re.I).search
 
 
 def expand_indent(line):
@@ -1102,10 +1091,6 @@ def mute_string(text):
     return text[:start] + 'x' * (end - start) + text[end:]
 
 
-def noqa(line):
-    return line.strip().lower().endswith(('# noqa', '# nopep8'))
-
-
 def parse_udiff(diff, patterns=None, parent='.'):
     """Return a dictionary of matching lines."""
     # For each file of the diff, the entry key is the filename,
@@ -1153,15 +1138,20 @@ def register_check(check, codes=None):
     """
     Register a new check object.
     """
+    def _add_check(check, kind, codes, args):
+        if check in _checks[kind]:
+            _checks[kind][check][0].extend(codes or [])
+        else:
+            _checks[kind][check] = (codes or [''], args)
     if inspect.isfunction(check):
         args = inspect.getargspec(check)[0]
         if args and args[0] in ('physical_line', 'logical_line'):
             if codes is None:
                 codes = ERRORCODE_REGEX.findall(check.__doc__ or '')
-            _checks[args[0]][check] = (codes or [''], args)
+            _add_check(check, args[0], codes, args)
     elif inspect.isclass(check):
         if inspect.getargspec(check.__init__)[0][:2] == ['self', 'tree']:
-            _checks['tree'][check] = (codes or [''], None)
+            _add_check(check, 'tree', codes, None)
 
 
 def init_checks_registry():
@@ -1190,7 +1180,6 @@ class Checker(object):
         self._physical_checks = options.physical_checks
         self._logical_checks = options.logical_checks
         self._ast_checks = options.ast_checks
-        self._options = options
         self.max_line_length = options.max_line_length
         self.verbose = options.verbose
         self.filename = filename
@@ -1217,7 +1206,7 @@ class Checker(object):
         offset = exc.args[1]
         if len(offset) > 2:
             offset = offset[1:3]
-        self.report_error(offset[0], offset[1],
+        self.report_error(offset[0], offset[1] or 0,
                           'E901 %s: %s' % (exc_type.__name__, exc.args[0]),
                           self.report_invalid_syntax)
     report_invalid_syntax.__doc__ = "    Check if the syntax is valid."
@@ -1269,10 +1258,14 @@ class Checker(object):
         """
         self.mapping = []
         logical = []
+        comments = []
         length = 0
         previous = None
         for token in self.tokens:
             token_type, text = token[0:2]
+            if token_type == tokenize.COMMENT:
+                comments.append(text)
+                continue
             if token_type in SKIP_TOKENS:
                 continue
             if token_type == tokenize.STRING:
@@ -1295,6 +1288,7 @@ class Checker(object):
             length += len(text)
             previous = token
         self.logical_line = ''.join(logical)
+        self.noqa = comments and noqa(''.join(comments))
         # With Python 2, if the line ends with '\r\r\n' the assertion fails
         # assert self.logical_line.strip() == self.logical_line
 
@@ -1331,7 +1325,7 @@ class Checker(object):
         except SyntaxError:
             return self.report_invalid_syntax()
         for name, cls, _ in self._ast_checks:
-            checker = cls(tree, self.filename, self._options)
+            checker = cls(tree, self.filename)
             for lineno, offset, text, check in checker.run():
                 if not noqa(self.lines[lineno - 1]):
                     self.report_error(lineno, offset, text, check)
@@ -1503,17 +1497,29 @@ class StandardReport(BaseReport):
         self._show_source = options.show_source
         self._show_pep8 = options.show_pep8
 
+    def init_file(self, filename, lines, expected, line_offset):
+        """Signal a new file."""
+        self._deferred_print = []
+        return super(StandardReport, self).init_file(
+            filename, lines, expected, line_offset)
+
     def error(self, line_number, offset, text, check):
-        """
-        Report an error, according to options.
-        """
+        """Report an error, according to options."""
         code = super(StandardReport, self).error(line_number, offset,
                                                  text, check)
         if code and (self.counters[code] == 1 or self._repeat):
+            self._deferred_print.append(
+                (line_number, offset, code, text[5:], check.__doc__))
+        return code
+
+    def get_file_results(self):
+        """Print the result and return the overall count for this file."""
+        self._deferred_print.sort()
+        for line_number, offset, code, text, doc in self._deferred_print:
             print(self._fmt % {
                 'path': self.filename,
                 'row': self.line_offset + line_number, 'col': offset + 1,
-                'code': code, 'text': text[5:],
+                'code': code, 'text': text,
             })
             if self._show_source:
                 if line_number > len(self.lines):
@@ -1522,9 +1528,9 @@ class StandardReport(BaseReport):
                     line = self.lines[line_number - 1]
                 print(line.rstrip())
                 print(' ' * offset + '^')
-            if self._show_pep8:
-                print(check.__doc__.lstrip('\n').rstrip())
-        return code
+            if self._show_pep8 and doc:
+                print(doc.lstrip('\n').rstrip())
+        return self.file_errors
 
 
 class DiffReport(StandardReport):
@@ -1540,50 +1546,12 @@ class DiffReport(StandardReport):
         return super(DiffReport, self).error(line_number, offset, text, check)
 
 
-class TestReport(StandardReport):
-    """Collect the results for the tests."""
-
-    def __init__(self, options):
-        options.benchmark_keys += ['test cases', 'failed tests']
-        super(TestReport, self).__init__(options)
-        self._verbose = options.verbose
-
-    def get_file_results(self):
-        # Check if the expected errors were found
-        label = '%s:%s:1' % (self.filename, self.line_offset)
-        codes = sorted(self.expected)
-        for code in codes:
-            if not self.counters.get(code):
-                self.file_errors += 1
-                self.total_errors += 1
-                print('%s: error %s not found' % (label, code))
-        if self._verbose and not self.file_errors:
-            print('%s: passed (%s)' %
-                  (label, ' '.join(codes) or 'Okay'))
-        self.counters['test cases'] += 1
-        if self.file_errors:
-            self.counters['failed tests'] += 1
-        # Reset counters
-        for key in set(self.counters) - set(self._benchmark_keys):
-            del self.counters[key]
-        self.messages = {}
-        return self.file_errors
-
-    def print_results(self):
-        results = ("%(physical lines)d lines tested: %(files)d files, "
-                   "%(test cases)d test cases%%s." % self.counters)
-        if self.total_errors:
-            print(results % ", %s failures" % self.total_errors)
-        else:
-            print(results % "")
-        print("Test failed." if self.total_errors else "Test passed.")
-
-
 class StyleGuide(object):
     """Initialize a PEP-8 instance with few options."""
 
     def __init__(self, *args, **kwargs):
         # build options from the command line
+        self.checker_class = kwargs.pop('checker_class', Checker)
         parse_argv = kwargs.pop('parse_argv', False)
         config_file = kwargs.pop('config_file', None)
         parser = kwargs.pop('parser', None)
@@ -1604,9 +1572,14 @@ class StyleGuide(object):
 
         for index, value in enumerate(options.exclude):
             options.exclude[index] = value.rstrip('/')
-        # Ignore all checks which are not explicitly selected
         options.select = tuple(options.select or ())
-        options.ignore = tuple(options.ignore or options.select and ('',))
+        if not (options.select or options.ignore or
+                options.testsuite or options.doctest) and DEFAULT_IGNORE:
+            # The default choice: ignore controversial checks
+            options.ignore = tuple(DEFAULT_IGNORE.split(','))
+        else:
+            # Ignore all checks which are not explicitly selected
+            options.ignore = tuple(options.ignore or options.select and ('',))
         options.benchmark_keys = BENCHMARK_KEYS[:]
         options.ignore_code = self.ignore_code
         options.physical_checks = self.get_checks('physical_line')
@@ -1626,11 +1599,14 @@ class StyleGuide(object):
         report = self.options.report
         runner = self.runner
         report.start()
-        for path in paths:
-            if os.path.isdir(path):
-                self.input_dir(path)
-            elif not self.excluded(path):
-                runner(path)
+        try:
+            for path in paths:
+                if os.path.isdir(path):
+                    self.input_dir(path)
+                elif not self.excluded(path):
+                    runner(path)
+        except KeyboardInterrupt:
+            print('... stopped')
         report.stop()
         return report
 
@@ -1638,7 +1614,8 @@ class StyleGuide(object):
         """Run all checks on a Python source file."""
         if self.options.verbose:
             print('checking %s' % filename)
-        fchecker = Checker(filename, lines=lines, options=self.options)
+        fchecker = self.checker_class(
+            filename, lines=lines, options=self.options)
         return fchecker.check_all(expected=expected, line_offset=line_offset)
 
     def input_dir(self, dirname):
@@ -1697,100 +1674,6 @@ class StyleGuide(object):
         return sorted(checks)
 
 
-def init_tests(pep8style):
-    """
-    Initialize testing framework.
-
-    A test file can provide many tests.  Each test starts with a
-    declaration.  This declaration is a single line starting with '#:'.
-    It declares codes of expected failures, separated by spaces or 'Okay'
-    if no failure is expected.
-    If the file does not contain such declaration, it should pass all
-    tests.  If the declaration is empty, following lines are not checked,
-    until next declaration.
-
-    Examples:
-
-     * Only E224 and W701 are expected:         #: E224 W701
-     * Following example is conform:            #: Okay
-     * Don't check these lines:                 #:
-    """
-    report = pep8style.init_report(TestReport)
-    runner = pep8style.input_file
-
-    def run_tests(filename):
-        """Run all the tests from a file."""
-        lines = readlines(filename) + ['#:\n']
-        line_offset = 0
-        codes = ['Okay']
-        testcase = []
-        count_files = report.counters['files']
-        for index, line in enumerate(lines):
-            if not line.startswith('#:'):
-                if codes:
-                    # Collect the lines of the test case
-                    testcase.append(line)
-                continue
-            if codes and index:
-                codes = [c for c in codes if c != 'Okay']
-                # Run the checker
-                runner(filename, testcase, expected=codes,
-                       line_offset=line_offset)
-            # output the real line numbers
-            line_offset = index + 1
-            # configure the expected errors
-            codes = line.split()[1:]
-            # empty the test case buffer
-            del testcase[:]
-        report.counters['files'] = count_files + 1
-        return report.counters['failed tests']
-
-    pep8style.runner = run_tests
-
-
-def selftest(options):
-    """
-    Test all check functions with test cases in docstrings.
-    """
-    count_failed = count_all = 0
-    report = BaseReport(options)
-    counters = report.counters
-    checks = options.physical_checks + options.logical_checks
-    for name, check, argument_names in checks:
-        for line in check.__doc__.splitlines():
-            line = line.lstrip()
-            match = SELFTEST_REGEX.match(line)
-            if match is None:
-                continue
-            code, source = match.groups()
-            lines = [part.replace(r'\t', '\t') + '\n'
-                     for part in source.split(r'\n')]
-            checker = Checker(lines=lines, options=options, report=report)
-            checker.check_all()
-            error = None
-            if code == 'Okay':
-                if len(counters) > len(options.benchmark_keys):
-                    codes = [key for key in counters
-                             if key not in options.benchmark_keys]
-                    error = "incorrectly found %s" % ', '.join(codes)
-            elif not counters.get(code):
-                error = "failed to find %s" % code
-            # Keep showing errors for multiple tests
-            for key in set(counters) - set(options.benchmark_keys):
-                del counters[key]
-            report.messages = {}
-            count_all += 1
-            if not error:
-                if options.verbose:
-                    print("%s: %s" % (code, source))
-            else:
-                count_failed += 1
-                print("%s: %s:" % (__file__, error))
-                for line in checker.lines:
-                    print(line.rstrip())
-    return count_failed, count_all
-
-
 def get_parser(prog='pep8', version=__version__):
     parser = OptionParser(prog=prog, version=version,
                           usage="%prog [options] input ...")
@@ -1837,10 +1720,11 @@ def get_parser(prog='pep8', version=__version__):
                       help="report only lines changed according to the "
                            "unified diff received on STDIN")
     group = parser.add_option_group("Testing Options")
-    group.add_option('--testsuite', metavar='dir',
-                     help="run regression tests from dir")
-    group.add_option('--doctest', action='store_true',
-                     help="run doctest on myself")
+    if os.path.exists(TESTSUITE_PATH):
+        group.add_option('--testsuite', metavar='dir',
+                         help="run regression tests from dir")
+        group.add_option('--doctest', action='store_true',
+                         help="run doctest on myself")
     group.add_option('--benchmark', action='store_true',
                      help="measure processing speed")
     return parser
@@ -1858,17 +1742,11 @@ def read_config(options, args, arglist, parser):
 
     parent = tail = args and os.path.abspath(os.path.commonprefix(args))
     while tail:
-        for name in PROJECT_CONFIG:
-            local_conf = os.path.join(parent, name)
-            if os.path.isfile(local_conf):
-                break
-        else:
-            parent, tail = os.path.split(parent)
-            continue
-        if options.verbose:
-            print('local configuration: %s' % local_conf)
-        config.read(local_conf)
-        break
+        if config.read([os.path.join(parent, fn) for fn in PROJECT_CONFIG]):
+            if options.verbose:
+                print('local configuration: in %s' % parent)
+            break
+        parent, tail = os.path.split(parent)
 
     pep8_section = parser.prog
     if config.has_section(pep8_section):
@@ -1899,7 +1777,7 @@ def read_config(options, args, arglist, parser):
 
         # Third, overwrite with the command-line options
         options, _ = parser.parse_args(arglist, values=new_options)
-
+    options.doctest = options.testsuite = False
     return options
 
 
@@ -1924,9 +1802,9 @@ def process_options(arglist=None, parse_argv=False, config_file=None,
     options, args = parser.parse_args(arglist)
     options.reporter = None
 
-    if options.testsuite:
+    if options.ensure_value('testsuite', False):
         args.append(options.testsuite)
-    elif not options.doctest:
+    elif not options.ensure_value('doctest', False):
         if parse_argv and not args:
             if options.diff or any(os.path.exists(name)
                                    for name in PROJECT_CONFIG):
@@ -1936,18 +1814,10 @@ def process_options(arglist=None, parse_argv=False, config_file=None,
         options = read_config(options, args, arglist, parser)
         options.reporter = parse_argv and options.quiet == 1 and FileReport
 
-    if options.filename:
-        options.filename = options.filename.split(',')
+    options.filename = options.filename and options.filename.split(',')
     options.exclude = options.exclude.split(',')
-    if options.select:
-        options.select = options.select.split(',')
-    if options.ignore:
-        options.ignore = options.ignore.split(',')
-    elif not (options.select or
-              options.testsuite or options.doctest) and DEFAULT_IGNORE:
-        # The default choice: ignore controversial checks
-        # (for doctest and testsuite, all checks are required)
-        options.ignore = DEFAULT_IGNORE.split(',')
+    options.select = options.select and options.select.split(',')
+    options.ignore = options.ignore and options.ignore.split(',')
 
     if options.diff:
         options.reporter = DiffReport
@@ -1962,20 +1832,11 @@ def _main():
     """Parse options and run checks on Python source."""
     pep8style = StyleGuide(parse_argv=True, config_file=True)
     options = pep8style.options
-    if options.doctest:
-        import doctest
-        fail_d, done_d = doctest.testmod(report=False, verbose=options.verbose)
-        fail_s, done_s = selftest(options)
-        count_failed = fail_s + fail_d
-        if not options.quiet:
-            count_passed = done_d + done_s - count_failed
-            print("%d passed and %d failed." % (count_passed, count_failed))
-            print("Test failed." if count_failed else "Test passed.")
-        if count_failed:
-            sys.exit(1)
-    if options.testsuite:
-        init_tests(pep8style)
-    report = pep8style.check_files()
+    if options.doctest or options.testsuite:
+        from testsuite.support import run_tests
+        report = run_tests(pep8style)
+    else:
+        report = pep8style.check_files()
     if options.statistics:
         report.print_statistics()
     if options.benchmark:
