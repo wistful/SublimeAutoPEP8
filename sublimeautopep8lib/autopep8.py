@@ -53,7 +53,10 @@ from optparse import OptionParser
 import difflib
 import tempfile
 
-import pep8
+try:
+    import pep8
+except ImportError:
+    from . import pep8
 
 
 try:

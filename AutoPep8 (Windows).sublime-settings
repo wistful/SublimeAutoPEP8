@@ -1,11 +1,21 @@
 {
+    "max-line-length": 79,
+
+    // list codes for fixes; used by --ignore and --select
+	"list-fixes": "",
+    
     // do not fix these errors / warnings(e.g. E4, W)
     "ignore": "",
+    
     // select errors / warnings(e.g. E4, W)
     "select": "",
-    "format_on_save": false,
-    // path to python binary which should use to execute autopep8.py module
-    "python": "pythonw"
-    // path to autopep8 lib
-    // , "autopep8": "D:\\sublime\\autopep8.py"
+    
+    // enable possibly unsafe changes (E711, E712) 
+    "aggressive": 0,
+	
+	// verbose level
+    "verbose": 0,
+    
+    "format_on_save": false
 }
+
