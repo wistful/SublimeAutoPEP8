@@ -1,4 +1,4 @@
-## coding=utf-8
+# coding=utf-8
 import os
 from collections import namedtuple
 import re
@@ -7,42 +7,45 @@ import difflib
 import sublime
 import sublime_plugin
 
-if int(sublime.version()) > 3000:
-    import sys
-    from io import StringIO
-    from imp import reload
-
-    try:
-        from AutoPEP8.sublimeautopep8lib import autopep8
-    except ImportError:
-        sys.path.append(os.path.join(sublime.packages_path(), 'AutoPep8', 'sublimeautopep8lib'))
-        autopep8 = __import__('autopep8')
-        reload(autopep8)
-        del sys.path[-1]
-else:
+try:
     from StringIO import StringIO
-    import sublimeautopep8lib.autopep8 as autopep8
+except ImportError:
+    from io import StringIO
 
+try:
+    import sublimeautopep8lib.autopep8 as autopep8
+except ImportError:
+    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
-base_name = sublime.platform() == 'windows' and 'AutoPep8 (Windows).sublime-settings' or 'AutoPep8.sublime-settings'
+if sublime.platform() == 'windows':
+    base_name = 'AutoPep8 (Windows).sublime-settings'
+else:
+    base_name = 'AutoPep8.sublime-settings'
 
 
 class AutoPep8(object):
+
     """AutoPep8 Formatter"""
 
     def pep8_params(self):
-        params = ['-d', '-vv']  # args for preview
+        params = ['-d']  # args for preview
 
         # read settings
         settings = sublime.load_settings(base_name)
-        if settings.get("ignore"):
-            params.append("--ignore=" + settings.get("ignore"))
-        if settings.get("select"):
-            params.append("--select=" + settings.get("select"))
+        for opt in ("ignore", "select", "max-line-length"):
+            params.append("--{0}={1}".format(opt, settings.get(opt, "")))
 
-        params.append('fake-arg')  # autopep8.parse_args raises exception without it
+        if settings.get("list-fixes", None):
+            params.append("--{0}={1}".format(opt, settings.get(opt)))
+
+        for opt in ("verbose", ):
+            opt_count = settings.get(opt, 0)
+            params.extend(["--"+opt]*opt_count)
+
+        params.append(
+            'fake-arg')  # autopep8.parse_args raises exception without it
         return autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
@@ -66,10 +69,8 @@ class AutoPep8(object):
         view = sublime.active_window().new_file()
         view.set_encoding(encoding)
         view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-        edit = view.begin_edit()
-        view.insert(edit, 0, text)
-        view.end_edit(edit)
-        view.set_scratch(1)
+        view.run_command("auto_pep8_output", {"text": text})
+        view.set_scratch(True)
 
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
@@ -100,8 +101,8 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
             sel.add(sublime.Region(cur_point, cur_point))
 
         # restore viewport
-        self.view.set_viewport_position(
-            (0.0, 0.0))  # magic, next line doesn't work without it
+        # magic, next line doesn't work without it
+        self.view.set_viewport_position((0.0, 0.0))
         self.view.set_viewport_position(self.vector)
 
     def run(self, edit, preview=True):
@@ -134,6 +135,16 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
 
 
+class AutoPep8OutputCommand(sublime_plugin.TextCommand, AutoPep8):
+
+    def run(self, edit, text):
+        self.view.insert(edit, 0, text)
+        self.view.end_edit(edit)
+
+    def is_visible(self, *args):
+        return False
+
+
 class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
     file_names = None
@@ -151,7 +162,9 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             sublime.status_message(
                 "autopep8: formatting {path}".format(path=path))
 
-            if not out_data or out_data == in_data or (preview and len(out_data.split('\n')) < 3):
+            if not out_data \
+                or out_data == in_data \
+                    or (preview and len(out_data.split('\n')) < 3):
                 continue
 
             has_changes = True
@@ -191,32 +204,15 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
 
 class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
 
-    def on_pre_save(self, view):
+    def on_pre_save_async(self, view):
         if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
                 or not sublime.load_settings(base_name).get('format_on_save', False):
             return
-        # save cursor position
-        cur_row, cur_col = view.rowcol(view.sel()[0].begin())
 
-        # save viewport
-        vector = view.text_to_layout(view.visible_region().begin())
+        view.run_command("auto_pep8", {"preview": False})
 
-        region = sublime.Region(0, view.size())
-        source = view.substr(region)
-        out_data = self.format_text(source)
-        if out_data != source:
-            edit = view.begin_edit()
-            view.replace(edit, region, out_data)
-            view.end_edit(edit)
+    def on_pre_save(self, view):
+        if sublime.version() < '3000':
+            self.on_pre_save_async(view)
 
-            # restore cursor position
-            sel = view.sel()
-            if len(sel) == 1 and sel[0].a == sel[0].b:
-                cur_point = view.text_point(cur_row, cur_col)
-                sel.subtract(sel[0])
-                sel.add(sublime.Region(cur_point, cur_point))
 
-            # restore viewport
-            view.set_viewport_position(
-                (0.0, 0.0))  # magic, next line doesn't work without it
-            view.set_viewport_position(vector)
