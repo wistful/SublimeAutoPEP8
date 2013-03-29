@@ -40,12 +40,12 @@ class AutoPep8(object):
         if settings.get("list-fixes", None):
             params.append("--{0}={1}".format(opt, settings.get(opt)))
 
-        for opt in ("verbose", ):
+        for opt in ("verbose", "aggressive"):
             opt_count = settings.get(opt, 0)
             params.extend(["--"+opt]*opt_count)
-
-        params.append(
-            'fake-arg')  # autopep8.parse_args raises exception without it
+        
+        # autopep8.parse_args raises exception without it
+        params.append('fake-arg')
         return autopep8.parse_args(params)[0]
 
     def _get_diff(self, old, new, filename):
@@ -56,7 +56,9 @@ class AutoPep8(object):
         return ''.join(diff)
 
     def format_text(self, text):
-        print("SublimeAutoPEP8: pep8_params={0}".format(self.pep8_params()))
+        pep8_params = self.pep8_params()
+        if pep8_params.verbose > 0:
+            print("SublimeAutoPEP8: pep8_params={0}".format(pep8_params))
         return autopep8.fix_string(text, self.pep8_params())
 
     def update_status_message(self, has_changes):
