@@ -2,20 +2,19 @@
     "max-line-length": 79,
 
     // list codes for fixes; used by --ignore and --select
-	"list-fixes": "",
+    "list-fixes": "",
     
     // do not fix these errors / warnings(e.g. E4, W)
-    "ignore": "",
+    "ignore": "E24, E226",
     
     // select errors / warnings(e.g. E4, W)
     "select": "",
     
     // enable possibly unsafe changes (E711, E712) 
     "aggressive": 0,
-	
-	// verbose level
-    "verbose": 0,
+    
+    // verbose level
+    "verbose": 1,
     
     "format_on_save": false
 }
-
