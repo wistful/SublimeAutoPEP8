@@ -214,5 +214,3 @@ class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
     def on_pre_save(self, view):
         if sublime.version() < '3000':
             self.on_pre_save_async(view)
-
-
