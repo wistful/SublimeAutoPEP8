@@ -168,7 +168,9 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         self.restore_state()
 
     def is_visible(self, *args):
-        return self.view.settings().get('syntax') == "Packages/Python/Python.tmLanguage"
+        view_syntax = self.view.settings().get('syntax')
+        syntax_list = sublime.load_settings(base_name).get('syntax_list', ["Python"])
+        return os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list
 
 
 class AutoPep8OutputCommand(sublime_plugin.TextCommand, AutoPep8):

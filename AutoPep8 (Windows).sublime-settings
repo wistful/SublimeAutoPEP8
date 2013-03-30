@@ -17,5 +17,9 @@
     "verbose": 1,
     
     "format_on_save": false,
-    "show_output_panel": true
+    "show_output_panel": true,
+    // show Format/Preview menu items only for views
+    // with syntax from `syntax_list`
+    // value is base filename of the .tmLanguage syntax files
+    "syntax_list": ["Python"]
 }
