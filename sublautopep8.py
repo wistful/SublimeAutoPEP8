@@ -1,8 +1,10 @@
 # coding=utf-8
 import os
+import sys
 from collections import namedtuple
 import re
 import difflib
+from contextlib import contextmanager
 
 import sublime
 import sublime_plugin
@@ -25,6 +27,19 @@ else:
     base_name = 'AutoPep8.sublime-settings'
 
 
+@contextmanager
+def redirect_std():
+    Std = namedtuple('Std', ['out', 'err', 'in_'])
+    std = Std(StringIO(), StringIO(), StringIO())
+    try:
+        _stdout, _stderr, _stdin = sys.stdout, sys.stderr, sys.stdin
+        sys.stdout, sys.stderr, sys.stdin = std
+        yield std
+    finally:
+        sys.stdout, sys.stderr, sys.stdin = _stdout, _stderr, _stdin
+        std.out.close(), std.err.close(), std.in_.close()
+
+
 class AutoPep8(object):
 
     """AutoPep8 Formatter"""
@@ -42,11 +57,14 @@ class AutoPep8(object):
 
         for opt in ("verbose", "aggressive"):
             opt_count = settings.get(opt, 0)
-            params.extend(["--"+opt]*opt_count)
-        
+            params.extend(["--" + opt] * opt_count)
+
         # autopep8.parse_args raises exception without it
         params.append('fake-arg')
         return autopep8.parse_args(params)[0]
+
+    def std_message(self, std):
+        return '{0}\n{1}'.format(std.out.getvalue(), std.err.getvalue())
 
     def _get_diff(self, old, new, filename):
         diff = difflib.unified_diff(
@@ -57,9 +75,10 @@ class AutoPep8(object):
 
     def format_text(self, text):
         pep8_params = self.pep8_params()
-        if pep8_params.verbose > 0:
-            print("SublimeAutoPEP8: pep8_params={0}".format(pep8_params))
-        return autopep8.fix_string(text, self.pep8_params())
+        if pep8_params.verbose > 4:
+            print("pep8 options: {0}".format(pep8_params))
+
+        return autopep8.fix_string(text, pep8_params)
 
     def update_status_message(self, has_changes):
         if has_changes:
@@ -73,6 +92,17 @@ class AutoPep8(object):
         view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
         view.run_command("auto_pep8_output", {"text": text})
         view.set_scratch(True)
+
+    def panel(self, text):
+        if not sublime.load_settings(base_name).get('show_output_panel', False):
+            print(text)
+            return
+        view = sublime.active_window().get_output_panel("autopep8")
+        view.set_read_only(False)
+        view.run_command("auto_pep8_output", {"text": text})
+        view.set_read_only(True)
+        sublime.active_window().run_command(
+            "show_panel", {"panel": "output.autopep8"})
 
 
 class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
@@ -108,25 +138,29 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
         self.view.set_viewport_position(self.vector)
 
     def run(self, edit, preview=True):
-        preview_output = ''
+        std_message = preview_output = ''
         has_changes = False
 
         self.save_state()
 
-        for region, substr in self.sel():
-            out_data = self.format_text(substr)
-            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
-                continue
+        with redirect_std() as std:
+            std.out.write("{0}:\n".format(self.view.file_name()))
+            for region, substr in self.sel():
+                out_data = self.format_text(substr)
+                if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
+                    continue
 
-            has_changes = True
-            if not preview:
-                self.view.replace(edit, region, out_data)
-            else:
-                preview_output += self._get_diff(
-                    substr, out_data, self.view.file_name())
+                has_changes = True
+                if not preview:
+                    self.view.replace(edit, region, out_data)
+                else:
+                    preview_output += self._get_diff(
+                        substr, out_data, self.view.file_name())
 
+            std_message = self.std_message(std)
         self.update_status_message(has_changes)
 
+        self.panel(std_message)
         if has_changes and preview_output:
             self.new_view('utf-8', preview_output)
             return
@@ -156,29 +190,38 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
             return
 
         has_changes = False
-        preview_output = ''
+        preview_output = std_message = ''
 
         for path in self.file_names:
-            in_data = open(path, 'r').read()
-            out_data = self.format_text(in_data)
-            sublime.status_message(
-                "autopep8: formatting {path}".format(path=path))
+            print(path)
 
-            if not out_data \
-                or out_data == in_data \
-                    or (preview and len(out_data.split('\n')) < 3):
-                continue
+        with redirect_std() as std:
+            for path in self.file_names:
+                in_data = open(path, 'r').read()
+                out_data = self.format_text(in_data)
+                sublime.status_message(
+                    "autopep8: formatting {path}".format(path=path))
 
-            has_changes = True
-            if not preview:
-                open(path, 'w').write(out_data)
-            else:
-                preview_output += self._get_diff(in_data, out_data, path)
+                if not out_data \
+                    or out_data == in_data \
+                        or (preview and len(out_data.split('\n')) < 3):
+                    continue
+
+                has_changes = True
+                if not preview:
+                    open(path, 'w').write(out_data)
+                else:
+                    preview_output += self._get_diff(in_data, out_data, path)
+                std_message = "{0}\n{1}:\n{2}".format(std_message,
+                                                      path,
+                                                      self.std_message(std))
+                std.out.truncate(0), std.err.truncate(0), std.in_.truncate(0)
 
         self.update_status_message(has_changes)
 
         if has_changes and preview_output:
             self.new_view('utf-8', preview_output)
+            self.panel(std_message)
 
     def files(self, path):
         result = []

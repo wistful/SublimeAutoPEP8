@@ -16,5 +16,6 @@
     // verbose level
     "verbose": 1,
     
-    "format_on_save": false
+    "format_on_save": false,
+    "show_output_panel": true
 }
