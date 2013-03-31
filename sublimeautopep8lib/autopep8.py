@@ -1848,7 +1848,6 @@ def fix_string(source, options=None, stdoutput=sys.stderr):
         options = parse_args([''])[0]
 
     sio = StringIO(source)
-    print('stdoutput:', stdoutput)
     return fix_lines(sio.readlines(), options=options, stdoutput=stdoutput)
 
 
