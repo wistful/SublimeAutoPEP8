@@ -27,19 +27,6 @@ else:
     BASE_NAME = 'AutoPep8.sublime-settings'
 
 
-@contextmanager
-def redirect_std():
-    Std = namedtuple('Std', ['out', 'err', 'in_'])
-    std = Std(StringIO(), StringIO(), StringIO())
-    try:
-        _stdout, _stderr, _stdin = sys.stdout, sys.stderr, sys.stdin
-        sys.stdout, sys.stderr, sys.stdin = std
-        yield std
-    finally:
-        sys.stdout, sys.stderr, sys.stdin = _stdout, _stderr, _stdin
-        std.out.close(), std.err.close(), std.in_.close()
-
-
 class AutoPep8(object):
 
     """AutoPep8 Formatter"""
@@ -64,7 +51,7 @@ class AutoPep8(object):
         return autopep8.parse_args(params)[0]
 
     def std_message(self, std):
-        return '{0}\n{1}'.format(std.out.getvalue(), std.err.getvalue())
+        return '{0}'.format(std.getvalue())
 
     def _get_diff(self, old, new, filename):
         diff = difflib.unified_diff(
@@ -73,12 +60,12 @@ class AutoPep8(object):
             'fixed:' + filename)
         return ''.join(diff)
 
-    def format_text(self, text):
+    def format_text(self, text, stdoutput):
         pep8_params = self.pep8_params()
         if pep8_params.verbose > 4:
             print("pep8 options: {0}".format(pep8_params))
 
-        return autopep8.fix_string(text, pep8_params)
+        return autopep8.fix_string(text, pep8_params, stdoutput)
 
     def update_status_message(self, has_changes):
         if has_changes:
@@ -143,21 +130,21 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
         self.save_state()
 
-        with redirect_std() as std:
-            std.out.write("{0}:\n".format(self.view.file_name()))
-            for region, substr in self.sel():
-                out_data = self.format_text(substr)
-                if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
-                    continue
+        stdoutput = StringIO()
+        stdoutput.write("{0}:\n".format(self.view.file_name()))
+        for region, substr in self.sel():
+            out_data = self.format_text(substr, stdoutput)
+            if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
+                continue
 
-                has_changes = True
-                if not preview:
-                    self.view.replace(edit, region, out_data)
-                else:
-                    preview_output += self._get_diff(
-                        substr, out_data, self.view.file_name())
+            has_changes = True
+            if not preview:
+                self.view.replace(edit, region, out_data)
+            else:
+                preview_output += self._get_diff(
+                    substr, out_data, self.view.file_name())
 
-            std_message = self.std_message(std)
+        std_message = self.std_message(stdoutput)
         self.update_status_message(has_changes)
 
         self.panel(std_message)
@@ -197,27 +184,27 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand, AutoPep8):
         for path in self.file_names:
             print(path)
 
-        with redirect_std() as std:
-            for path in self.file_names:
-                in_data = open(path, 'r').read()
-                out_data = self.format_text(in_data)
-                sublime.status_message(
-                    "autopep8: formatting {path}".format(path=path))
+        stdoutput = StringIO()
+        for path in self.file_names:
+            in_data = open(path, 'r').read()
+            out_data = self.format_text(in_data, stdoutput)
+            sublime.status_message(
+                "autopep8: formatting {path}".format(path=path))
 
-                if not out_data \
-                    or out_data == in_data \
-                        or (preview and len(out_data.split('\n')) < 3):
-                    continue
+            if not out_data \
+                or out_data == in_data \
+                    or (preview and len(out_data.split('\n')) < 3):
+                continue
 
-                has_changes = True
-                if not preview:
-                    open(path, 'w').write(out_data)
-                else:
-                    preview_output += self._get_diff(in_data, out_data, path)
-                std_message = "{0}\n{1}:\n{2}".format(std_message,
-                                                      path,
-                                                      self.std_message(std))
-                std.out.truncate(0), std.err.truncate(0), std.in_.truncate(0)
+            has_changes = True
+            if not preview:
+                open(path, 'w').write(out_data)
+            else:
+                preview_output += self._get_diff(in_data, out_data, path)
+            std_message = "{0}\n{1}:\n{2}".format(std_message,
+                                                  path,
+                                                  self.std_message(stdoutput))
+            stdoutput.truncate(0)
 
         self.update_status_message(has_changes)
 
