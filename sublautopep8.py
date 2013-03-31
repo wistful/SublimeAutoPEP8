@@ -4,7 +4,9 @@ import sys
 from collections import namedtuple
 import re
 import difflib
-from contextlib import contextmanager
+
+from Queue import Queue
+import threading
 
 import sublime
 import sublime_plugin
@@ -25,6 +27,99 @@ if sublime.platform() == 'windows':
     BASE_NAME = 'AutoPep8 (Windows).sublime-settings'
 else:
     BASE_NAME = 'AutoPep8.sublime-settings'
+
+ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
+
+
+class AutoPep8Thread(threading.Thread):
+    """docstring for AutoPep8Thread"""
+    def __init__(self, queue):
+        super(AutoPep8Thread, self).__init__()
+        self.queue = queue
+        self.result = []
+
+    def run(self):
+        while True:
+            args = self.queue.get()
+            if args is None:
+                break
+            new = autopep8.fix_string(args['source'], args['pep8_params'], args['stdoutput'])
+            if args['preview']:
+                new = difflib.unified_diff(
+                    StringIO(args['source']).readlines(), StringIO(new).readlines(),
+                    'original:' + args['filename'],
+                    'fixed:' + args['filename'])
+                
+                # fix issue with join two last lines
+                lines = [item for item in new]
+                if len(lines) >= 4 and lines[-2][-1] != '\n':
+                    lines[-2] += '\n'
+
+                new = ''.join(lines)
+            args['new'] = new
+            self.result.append(args)
+
+
+def save_state(view):
+    # save cursor position
+    row, col = view.rowcol(view.sel()[0].begin())
+    # save viewport
+    vector = view.text_to_layout(view.visible_region().begin())
+    return ViewState(row, col, vector)
+
+
+def restore_state(view, state):
+    # restore cursor position
+    sel = view.sel()
+    if len(sel) == 1 and sel[0].a == sel[0].b:
+        point = view.text_point(state.row, state.col)
+        sel.subtract(sel[0])
+        sel.add(sublime.Region(point, point))
+
+    # restore viewport
+    # magic, next line doesn't work without it
+    view.set_viewport_position((0.0, 0.0))
+    view.set_viewport_position(state.vector)
+
+
+def new_view(encoding, text):
+    view = sublime.active_window().new_file()
+    view.set_encoding(encoding)
+    view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
+    view.run_command("auto_pep8_output", {"text": text})
+    view.set_scratch(True)
+
+
+def handle_threads(threads, preview, preview_output='', panel_output=None):
+    print("hello from handle_threads: ", threads)
+    new_threads = []
+    panel_output = panel_output or {}
+    for th in threads:
+        if th.is_alive():
+            new_threads.append(th)
+            continue
+        if th.result is None:
+            continue
+        for args in th.result:
+            # out_data = self.format_text(substr, stdoutput)s
+            out_data = args['new']
+            if not out_data or out_data == args['source'] or (args['preview'] and len(out_data.split('\n')) < 3):
+                continue
+            filename = args['filename']
+            panel_output[filename] = args['stdoutput'].getvalue()
+            if not args['preview']:
+                state = save_state(args['view'])
+                args['view'].replace(args['edit'], args['region'], out_data)
+                restore_state(args['view'], state)
+            else:
+                preview_output += args['new']
+
+
+    if len(new_threads) > 0:
+        sublime.set_timeout(lambda: handle_threads(new_threads, preview, preview_output, panel_output), 100)
+    elif preview:
+        new_view('utf-8', preview_output)
+
 
 
 class AutoPep8(object):
@@ -127,12 +222,25 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
     def run(self, edit, preview=True):
         std_message = preview_output = ''
         has_changes = False
+        pep8_params = self.pep8_params()
+        threads = []
 
         self.save_state()
 
+        queue = Queue()
         stdoutput = StringIO()
-        stdoutput.write("{0}:\n".format(self.view.file_name()))
         for region, substr in self.sel():
+            args = {'pep8_params': pep8_params, 'view': self.view, 
+                    'filename': self.view.file_name(),
+                    'source': substr, 'preview': preview, 'stdoutput': stdoutput,
+                    'edit': edit, 'region': region}
+            queue.put(args)
+            # th = threading.Thread(target=format_text, args=(queue, ))
+            th = AutoPep8Thread(queue)
+            th.start()
+            threads.append(th)
+            continue
+
             out_data = self.format_text(substr, stdoutput)
             if not out_data or out_data == substr or (preview and len(out_data.split('\n')) < 3):
                 continue
@@ -144,6 +252,11 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
                 preview_output += self._get_diff(
                     substr, out_data, self.view.file_name())
 
+        for _ in range(len(threads)):
+            queue.put(None)
+        if len(threads) > 0:
+            sublime.set_timeout(lambda: handle_threads(threads, preview), 100)
+        return
         std_message = self.std_message(stdoutput)
         self.update_status_message(has_changes)
 
