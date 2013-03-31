@@ -22,9 +22,9 @@ except ImportError:
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
 pycoding = re.compile("coding[:=]\s*([-\w.]+)")
 if sublime.platform() == 'windows':
-    base_name = 'AutoPep8 (Windows).sublime-settings'
+    BASE_NAME = 'AutoPep8 (Windows).sublime-settings'
 else:
-    base_name = 'AutoPep8.sublime-settings'
+    BASE_NAME = 'AutoPep8.sublime-settings'
 
 
 @contextmanager
@@ -48,7 +48,7 @@ class AutoPep8(object):
         params = ['-d']  # args for preview
 
         # read settings
-        settings = sublime.load_settings(base_name)
+        settings = sublime.load_settings(BASE_NAME)
         for opt in ("ignore", "select", "max-line-length"):
             params.append("--{0}={1}".format(opt, settings.get(opt, "")))
 
@@ -94,7 +94,7 @@ class AutoPep8(object):
         view.set_scratch(True)
 
     def panel(self, text):
-        if not sublime.load_settings(base_name).get('show_output_panel', False):
+        if not sublime.load_settings(BASE_NAME).get('show_output_panel', False):
             print(text)
             return
         view = sublime.active_window().get_output_panel("autopep8")
@@ -169,7 +169,7 @@ class AutoPep8Command(sublime_plugin.TextCommand, AutoPep8):
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
-        syntax_list = sublime.load_settings(base_name).get('syntax_list', ["Python"])
+        syntax_list = sublime.load_settings(BASE_NAME).get('syntax_list', ["Python"])
         return os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list
 
 
@@ -253,7 +253,7 @@ class AutoPep8Listener(sublime_plugin.EventListener, AutoPep8):
 
     def on_pre_save_async(self, view):
         if not view.settings().get('syntax') == "Packages/Python/Python.tmLanguage" \
-                or not sublime.load_settings(base_name).get('format_on_save', False):
+                or not sublime.load_settings(BASE_NAME).get('format_on_save', False):
             return
 
         view.run_command("auto_pep8", {"preview": False})
