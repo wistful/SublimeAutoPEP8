@@ -21,8 +21,8 @@ from . import pytree
 from . import pygram
 
 # The pattern grammar file
-_PATTERN_GRAMMAR_FILE = os.path.join(os.path.dirname(__file__),
-                                     "PatternGrammar.txt")
+_PATTERN_GRAMMAR_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                     "PatternGrammar.txt"))
 
 
 class PatternSyntaxError(Exception):
