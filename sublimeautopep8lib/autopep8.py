@@ -53,11 +53,14 @@ from optparse import OptionParser
 import difflib
 import tempfile
 
-try:
-    import pep8
-except ImportError:
-    from . import pep8
-
+# import modules exactly from plugin folder
+module_path = os.path.abspath(__file__)
+plugin_dir = os.path.abspath(os.path.join(os.path.dirname(module_path), '..'))
+sys.path.insert(0, plugin_dir)
+import sublimeautopep8lib.pep8 as pep8
+import lib2to3 as lib2to3
+sys.path.remove(plugin_dir)
+# finish importing module
 
 try:
     unicode
@@ -176,8 +179,9 @@ class FixPEP8(object):
 
     """
 
-    def __init__(self, filename, options, contents=None):
+    def __init__(self, filename, options, contents=None, stdoutput=None):
         self.filename = filename
+        self.stdoutput = stdoutput or sys.stderr
         if contents is None:
             self.source = read_from_filename(filename, readlines=True)
         else:
@@ -241,19 +245,19 @@ class FixPEP8(object):
                         print(
                             '--->  Not fixing {f} on line {l}'.format(
                                 f=result['id'], l=result['line']),
-                            file=sys.stderr)
+                            file=self.stdoutput)
                 else:  # We assume one-line fix when None
                     completed_lines.add(result['line'])
             else:
                 if self.options.verbose >= 3:
                     print("--->  '%s' is not defined." % fixed_methodname,
-                          file=sys.stderr)
+                          file=self.stdoutput)
                     info = result['info'].strip()
                     print('--->  %s:%s:%s:%s' % (self.filename,
                                                  result['line'],
                                                  result['column'],
                                                  info),
-                          file=sys.stderr)
+                          file=self.stdoutput)
 
     def fix(self):
         """Return a version of the source code with PEP 8 violations fixed."""
@@ -271,7 +275,7 @@ class FixPEP8(object):
                     progress[r['id']] = set()
                 progress[r['id']].add(r['line'])
             print('--->  {n} issue(s) to fix {progress}'.format(
-                n=len(results), progress=progress), file=sys.stderr)
+                n=len(results), progress=progress), file=self.stdoutput)
 
         self._fix_source(filter_results(source=unicode().join(self.source),
                                         results=results,
@@ -736,7 +740,7 @@ class FixPEP8(object):
 
         if self.options.verbose >= 4:
             print(('-' * 79 + '\n').join([''] + candidates + ['']),
-                  file=sys.stderr)
+                  file=self.stdoutput)
 
         for _candidate in candidates:
             if _candidate is None:
@@ -913,11 +917,12 @@ def refactor(source, fixer_names, ignore=None):
     Skip if ignore string is produced in the refactored code.
 
     """
-    from lib2to3 import pgen2
+    from lib2to3.pgen2 import parse
+
     try:
         new_text = refactor_with_2to3(source,
                                       fixer_names=fixer_names)
-    except (pgen2.parse.ParseError,
+    except (parse.ParseError,
             UnicodeDecodeError,
             UnicodeEncodeError,
             IndentationError):
@@ -1837,16 +1842,16 @@ def code_match(code, select, ignore):
     return True
 
 
-def fix_string(source, options=None):
+def fix_string(source, options=None, stdoutput=sys.stderr):
     """Return fixed source code."""
     if not options:
         options = parse_args([''])[0]
 
     sio = StringIO(source)
-    return fix_lines(sio.readlines(), options=options)
+    return fix_lines(sio.readlines(), options=options, stdoutput=stdoutput)
 
 
-def fix_lines(source_lines, options, filename=''):
+def fix_lines(source_lines, options, filename='', stdoutput=sys.stderr):
     """Return fixed source code."""
     tmp_source = unicode().join(normalize_line_endings(source_lines))
 
@@ -1854,12 +1859,12 @@ def fix_lines(source_lines, options, filename=''):
     previous_hashes = set([hash(tmp_source)])
 
     # Apply global fixes only once (for efficiency).
-    fixed_source = apply_global_fixes(tmp_source, options)
+    fixed_source = apply_global_fixes(tmp_source, options, stdoutput=stdoutput)
 
     for _ in range(-1, options.pep8_passes):
         tmp_source = copy.copy(fixed_source)
 
-        fix = FixPEP8(filename, options, contents=tmp_source)
+        fix = FixPEP8(filename, options, contents=tmp_source, stdoutput=stdoutput)
         fixed_source = fix.fix()
 
         if hash(fixed_source) in previous_hashes:
@@ -1916,7 +1921,7 @@ def global_fixes():
                 yield (code, function)
 
 
-def apply_global_fixes(source, options):
+def apply_global_fixes(source, options, stdoutput=sys.stderr):
     """Run global fixes on source code.
 
     Thsese are fixes that only need be done once (unlike those in FixPEP8,
@@ -1927,8 +1932,11 @@ def apply_global_fixes(source, options):
         if code_match(code, select=options.select, ignore=options.ignore):
             if options.verbose:
                 print('--->  Applying global fix for {0}'.format(code.upper()),
-                      file=sys.stderr)
-            source = function(source)
+                      file=stdoutput)
+            if 'stdoutput' in inspect.getargspec(function):
+                source = function(source, stdoutput=stdoutput)
+            else:
+                source = function(source)
 
     return source
 
@@ -2206,17 +2214,17 @@ def find_files(filenames, recursive, exclude):
             yield name
 
 
-def _fix_file(parameters):
+def _fix_file(parameters, stdoutput=sys.stderr):
     """Helper function for optionally running fix_file() in parallel."""
     if parameters[1].verbose:
-        print('[file:{0}]'.format(parameters[0]), file=sys.stderr)
+        print('[file:{0}]'.format(parameters[0]), file=stdoutput)
     try:
         fix_file(*parameters)
     except IOError as error:
-        print(str(error), file=sys.stderr)
+        print(str(error), file=stdoutput)
 
 
-def fix_multiple_files(filenames, options, output=None):
+def fix_multiple_files(filenames, options, output=None, stdoutput=sys.stderr):
     """Fix list of files.
 
     Optionally fix files recursively.
@@ -2230,7 +2238,7 @@ def fix_multiple_files(filenames, options, output=None):
                  [(name, options) for name in filenames])
     else:
         for name in filenames:
-            _fix_file((name, options, output))
+            _fix_file((name, options, output), stdoutput=stdoutput)
 
 
 def is_python_file(filename):
