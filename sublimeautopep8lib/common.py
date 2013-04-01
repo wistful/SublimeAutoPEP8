@@ -93,8 +93,15 @@ def new_view(encoding, text):
 
 
 def show_panel(text):
-    if not sublime.load_settings(BASE_NAME).get('show_output_panel', False):
+    settings = sublime.load_settings(BASE_NAME)
+
+    if not settings.get('show_output_panel', False):
         return
+
+    if not text and not settings.get('show_empty_panel', False):
+        return
+
+    text = text or "SublimeAutoPep8: no issues to fixed."
     view = sublime.active_window().get_output_panel("autopep8")
     view.set_read_only(False)
     view.run_command("auto_pep8_output", {"text": text})
@@ -143,6 +150,6 @@ def handle_threads(threads, preview, preview_output='', panel_output=None):
             text = "{0}\n{1}:\n{2}".format(text, filename, output)
         show_panel(text)
         sublime.status_message('AutoPep8: Issues fixed.')
-        if preview:
+        if preview and preview_output:
             new_view('utf-8', preview_output)
         sublime.set_timeout(lambda: sublime.status_message(''), 3000)
