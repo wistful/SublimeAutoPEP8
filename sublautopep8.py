@@ -162,5 +162,7 @@ class AutoPep8Listener(sublime_plugin.EventListener):
             view.run_command("auto_pep8", {"preview": False})
 
     def on_pre_save(self, view):
+        if not sublime.load_settings(BASE_NAME).get('format_on_save', False):
+            return
         if sublime.version() < '3000':
             self.on_pre_save_async(view)
