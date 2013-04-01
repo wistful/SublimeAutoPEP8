@@ -90,6 +90,17 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
+def show_panel(text):
+    if not sublime.load_settings(BASE_NAME).get('show_output_panel', False):
+        return
+    view = sublime.active_window().get_output_panel("autopep8")
+    view.set_read_only(False)
+    view.run_command("auto_pep8_output", {"text": text})
+    view.set_read_only(True)
+    sublime.active_window().run_command(
+        "show_panel", {"panel": "output.autopep8"})
+
+
 def handle_threads(threads, preview, preview_output='', panel_output=None):
     print("hello from handle_threads: ", threads)
     new_threads = []
@@ -119,6 +130,11 @@ def handle_threads(threads, preview, preview_output='', panel_output=None):
         sublime.set_timeout(lambda: handle_threads(new_threads, preview, preview_output, panel_output), 100)
     elif preview:
         new_view('utf-8', preview_output)
+    if len(new_threads) == 0:
+        text = ""
+        for filename, output in panel_output.items():
+            text = "{0}\n{1}:\n{2}".format(text, filename, output)
+        show_panel(text)
 
 
 
