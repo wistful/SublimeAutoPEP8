@@ -110,7 +110,8 @@ def show_panel(text):
         "show_panel", {"panel": "output.autopep8"})
 
 
-def handle_threads(threads, preview, preview_output='', panel_output=None):
+def handle_threads(threads, preview, preview_output='',
+                   panel_output=None, has_changes=False):
     sublime.status_message('AutoPEP8: formatting ...')
     new_threads = []
     panel_output = panel_output or {}
@@ -127,6 +128,7 @@ def handle_threads(threads, preview, preview_output='', panel_output=None):
             if not out_data or out_data == args['source'] or (args['preview'] and len(out_data.split('\n')) < 3):
                 continue
 
+            has_changes = True
             panel_output[filename] = args['stdoutput'].getvalue()
             # preview file or view
             if preview:
@@ -142,14 +144,19 @@ def handle_threads(threads, preview, preview_output='', panel_output=None):
 
     if len(new_threads) > 0:
         sublime.set_timeout(
-            lambda: handle_threads(
-                new_threads, preview, preview_output, panel_output), 100)
+            lambda: handle_threads(new_threads, preview, preview_output,
+                                   panel_output, has_changes),
+            100)
     else:
-        text = ""
+        message = 'AutoPep8: No issues to fixed.'
+        if has_changes:
+            message = 'AutoPep8: Issues fixed.'
+        sublime.status_message(message)
+        panel_text = ""
         for filename, output in panel_output.items():
-            text = "{0}\n{1}:\n{2}".format(text, filename, output)
-        show_panel(text)
-        sublime.status_message('AutoPep8: Issues fixed.')
+            panel_text = "{0}\n{1}:\n{2}".format(panel_text, filename, output)
+        show_panel(panel_text)
+
         if preview and preview_output:
             new_view('utf-8', preview_output)
         sublime.set_timeout(lambda: sublime.status_message(''), 3000)
