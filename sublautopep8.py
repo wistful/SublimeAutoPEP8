@@ -60,6 +60,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
             yield region, self.view.substr(region)
 
     def run(self, edit, preview=True):
+        max_threads = sublime.load_settings(BASE_NAME).get('max-threads', 5)
         threads = []
         queue = Queue()
         stdoutput = StringIO()
@@ -72,9 +73,10 @@ class AutoPep8Command(sublime_plugin.TextCommand):
                     'stdoutput': stdoutput,
                     'edit': edit, 'region': region}
             queue.put(args)
-            th = AutoPep8Thread(queue)
-            th.start()
-            threads.append(th)
+            if len(threads) < max_threads:
+                th = AutoPep8Thread(queue)
+                th.start()
+                threads.append(th)
 
         for _ in range(len(threads)):
             queue.put(None)
@@ -105,7 +107,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def run(self, paths=None, preview=True):
         if not paths:
             return
-
+        max_threads = sublime.load_settings(BASE_NAME).get('max-threads', 5)
         threads = []
         queue = Queue()
 
@@ -118,9 +120,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
                     'stdoutput': stdoutput}
 
             queue.put(args)
-            th = AutoPep8Thread(queue)
-            th.start()
-            threads.append(th)
+            if len(threads) < max_threads:
+                th = AutoPep8Thread(queue)
+                th.start()
+                threads.append(th)
 
         for _ in range(len(threads)):
             queue.put(None)
