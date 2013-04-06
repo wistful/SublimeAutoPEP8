@@ -17,7 +17,8 @@ try:
     from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
 except ImportError:
     import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
-    from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread, handle_threads
+    from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
+    from AutoPEP8.sublimeautopep8lib.common import handle_threads
 
 
 plugin_path = os.path.split(os.path.abspath(__file__))[0]
@@ -28,19 +29,34 @@ else:
     BASE_NAME = 'AutoPep8.sublime-settings'
 
 
+def cfg(key, default=None, view=None):
+    view = view or sublime.active_window().active_view()
+    prj_cfg = view.settings().get("sublimeautopep8", {})
+    glob_cfg = sublime.load_settings(BASE_NAME)
+    return prj_cfg.get(key, glob_cfg.get(key, default))
+
+
+def cfg_fun(view=None):
+    view = view or sublime.active_window().active_view()
+    prj_cfg = view.settings().get("sublimeautopep8", {})
+    glob_cfg = sublime.load_settings(BASE_NAME)
+    return lambda key, default: prj_cfg.get(key, glob_cfg.get(key, default))
+
+
 def pep8_params():
     params = ['-d']  # args for preview
 
     # read settings
-    settings = sublime.load_settings(BASE_NAME)
+    settings = cfg_fun()
+    # settings = sublime.load_settings(BASE_NAME)
     for opt in ("ignore", "select", "max-line-length"):
-        params.append("--{0}={1}".format(opt, settings.get(opt, "")))
+        params.append("--{0}={1}".format(opt, settings(opt, "")))
 
-    if settings.get("list-fixes", None):
-        params.append("--{0}={1}".format(opt, settings.get(opt)))
+    if settings("list-fixes", None):
+        params.append("--{0}={1}".format(opt, settings(opt)))
 
     for opt in ("verbose", "aggressive"):
-        opt_count = settings.get(opt, 0)
+        opt_count = settings(opt, 0)
         params.extend(["--" + opt] * opt_count)
 
     # autopep8.parse_args raises exception without it
@@ -60,7 +76,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
             yield region, self.view.substr(region)
 
     def run(self, edit, preview=True):
-        max_threads = sublime.load_settings(BASE_NAME).get('max-threads', 5)
+        max_threads = cfg('max-threads', 5)
         threads = []
         queue = Queue()
         stdoutput = StringIO()
@@ -85,8 +101,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
-        syntax_list = sublime.load_settings(
-            BASE_NAME).get('syntax_list', ["Python"])
+        syntax_list = cfg('syntax_list', ["Python"])
         return os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list
 
 
@@ -107,7 +122,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def run(self, paths=None, preview=True):
         if not paths:
             return
-        max_threads = sublime.load_settings(BASE_NAME).get('max-threads', 5)
+        max_threads = cfg('max-threads', 5)
         threads = []
         queue = Queue()
 
@@ -156,13 +171,12 @@ class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save_async(self, view):
         view_syntax = view.settings().get('syntax')
-        syntax_list = sublime.load_settings(
-            BASE_NAME).get('syntax_list', ["Python"])
+        syntax_list = cfg('syntax_list', ["Python"])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
             view.run_command("auto_pep8", {"preview": False})
 
     def on_pre_save(self, view):
-        if not sublime.load_settings(BASE_NAME).get('format_on_save', False):
+        if not cfg('format_on_save', False):
             return
         if sublime.version() < '3000':
             self.on_pre_save_async(view)
