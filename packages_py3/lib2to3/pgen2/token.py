@@ -1,4 +1,4 @@
-#! /usr/bin/python2.6
+#! /usr/bin/python3.2
 
 """Token constants (from "token.h")."""
 
@@ -67,7 +67,7 @@ NT_OFFSET = 256
 #--end constants--
 
 tok_name = {}
-for _name, _value in globals().items():
+for _name, _value in list(globals().items()):
     if type(_value) is type(0):
         tok_name[_value] = _name
 

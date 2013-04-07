@@ -1,8 +1,12 @@
 # coding=utf-8
 import os
+import sys
 from collections import namedtuple
 import re
-from Queue import Queue
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
 
 import sublime
 import sublime_plugin
@@ -12,10 +16,13 @@ try:
 except ImportError:
     from io import StringIO
 
+
 try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "packages_py2"))
     import sublimeautopep8lib.autopep8 as autopep8
     from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
 except ImportError:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "packages_py3"))
     import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
     from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
     from AutoPEP8.sublimeautopep8lib.common import handle_threads
@@ -116,6 +123,16 @@ class AutoPep8OutputCommand(sublime_plugin.TextCommand):
         return False
 
 
+class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit, text, region):
+        region = sublime.Region(*region)
+        self.view.replace(edit, region, text)
+
+    def is_visible(self, *args):
+        return False
+
+
 class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 
     file_names = None
@@ -171,6 +188,8 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save_async(self, view):
+        if not cfg('format_on_save', False):
+            return
         view_syntax = view.settings().get('syntax')
         syntax_list = cfg('syntax_list', ["Python"])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:

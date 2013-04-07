@@ -158,7 +158,9 @@ def handle_threads(threads, preview, preview_output='',
             # format view
             elif not preview and view:
                 state = save_state(view)
-                view.replace(args['edit'], args['region'], out_data)
+                region = (args["region"].a, args["region"].b)
+                view.run_command("auto_pep8_replace", {"text": out_data,
+                                                       "region": region})
                 restore_state(view, state)
             # format file
             elif not preview and not view:
