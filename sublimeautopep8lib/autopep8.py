@@ -53,12 +53,12 @@ from optparse import OptionParser
 import difflib
 import tempfile
 
+import lib2to3
 # import modules exactly from plugin folder
 module_path = os.path.abspath(__file__)
 plugin_dir = os.path.abspath(os.path.join(os.path.dirname(module_path), '..'))
 sys.path.insert(0, plugin_dir)
 import sublimeautopep8lib.pep8 as pep8
-import lib2to3 as lib2to3
 sys.path.remove(plugin_dir)
 # finish importing module
 
@@ -918,7 +918,6 @@ def refactor(source, fixer_names, ignore=None):
 
     """
     from lib2to3.pgen2 import parse
-
     try:
         new_text = refactor_with_2to3(source,
                                       fixer_names=fixer_names)
