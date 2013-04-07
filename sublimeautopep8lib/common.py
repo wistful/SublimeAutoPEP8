@@ -4,6 +4,7 @@ import re
 import difflib
 
 import threading
+import re
 
 import sublime
 
@@ -26,6 +27,8 @@ else:
     BASE_NAME = 'AutoPep8.sublime-settings'
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
+
+PATTERN = re.compile(r"Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)")
 
 
 class AutoPep8Thread(threading.Thread):
@@ -92,7 +95,7 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
-def show_panel(text):
+def show_panel(text, has_change):
     settings = sublime.load_settings(BASE_NAME)
 
     if not settings.get('show_output_panel', False):
@@ -101,7 +104,13 @@ def show_panel(text):
     if not text and not settings.get('show_empty_panel', False):
         return
 
-    text = text or "SublimeAutoPep8: no issues to fixed."
+    if text:
+        text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
+    elif has_change and not text:
+        text = "SublimeAutoPep8: all issues were fixed."
+    elif not has_change and not text:
+        text = "SublimeAutoPep8: no issue(s) to fix."
+
     view = sublime.active_window().get_output_panel("autopep8")
     view.set_read_only(False)
     view.run_command("auto_pep8_output", {"text": text})
@@ -110,11 +119,22 @@ def show_panel(text):
         "show_panel", {"panel": "output.autopep8"})
 
 
+def find_not_fixing(text, filepath):
+    result = ""
+    last_to_fix = text.rfind("issue(s) to fix")
+    if last_to_fix > 0:
+        for code, line in PATTERN.findall(text[last_to_fix:]):
+            message = 'File "{0}", line {1}: not fixing {2}\n'.format(filepath,
+                                                                      line,
+                                                                      code)
+            result += message
+    return result
+
+
 def handle_threads(threads, preview, preview_output='',
-                   panel_output=None, has_changes=False):
+                   panel_output="", has_changes=False):
     sublime.status_message('AutoPEP8: formatting ...')
     new_threads = []
-    panel_output = panel_output or {}
     for th in threads:
         if th.is_alive():
             new_threads.append(th)
@@ -125,11 +145,13 @@ def handle_threads(threads, preview, preview_output='',
             out_data = args['new']
             view = args.get('view')
             filename = args['filename']
-            if not out_data or out_data == args['source'] or (args['preview'] and len(out_data.split('\n')) < 3):
+            panel_output += find_not_fixing(args['stdoutput'].getvalue(),
+                                            filename)
+            if not out_data or out_data == args['source'] \
+                    or (args['preview'] and len(out_data.split('\n')) < 3):
                 continue
 
             has_changes = True
-            panel_output[filename] = args['stdoutput'].getvalue()
             # preview file or view
             if preview:
                 preview_output += out_data
@@ -152,10 +174,7 @@ def handle_threads(threads, preview, preview_output='',
         if has_changes:
             message = 'AutoPep8: Issues fixed.'
         sublime.status_message(message)
-        panel_text = ""
-        for filename, output in panel_output.items():
-            panel_text = "{0}\n{1}:\n{2}".format(panel_text, filename, output)
-        show_panel(panel_text)
+        show_panel(panel_output, has_changes)
 
         if preview and preview_output:
             new_view('utf-8', preview_output)
