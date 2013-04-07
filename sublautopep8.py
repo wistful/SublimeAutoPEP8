@@ -102,7 +102,8 @@ class AutoPep8Command(sublime_plugin.TextCommand):
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
         syntax_list = cfg('syntax_list', ["Python"])
-        return os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list
+        filename = os.path.basename(view_syntax)
+        return os.path.splitext(filename)[0] in syntax_list
 
 
 class AutoPep8OutputCommand(sublime_plugin.TextCommand):
