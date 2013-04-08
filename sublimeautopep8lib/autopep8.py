@@ -53,7 +53,9 @@ from optparse import OptionParser
 import difflib
 import tempfile
 
-import lib2to3
+from lib2to3.pgen2 import parse
+from lib2to3.pgen2 import tokenize as lib2to3_tokenize
+from lib2to3.refactor import RefactoringTool
 # import modules exactly from plugin folder
 module_path = os.path.abspath(__file__)
 plugin_dir = os.path.abspath(os.path.join(os.path.dirname(module_path), '..'))
@@ -106,7 +108,6 @@ def detect_encoding(filename):
     """Return file encoding."""
     try:
         with open(filename, 'rb') as input_file:
-            from lib2to3.pgen2 import tokenize as lib2to3_tokenize
             encoding = lib2to3_tokenize.detect_encoding(input_file.readline)[0]
 
         # Check for correctness of encoding
@@ -917,7 +918,6 @@ def refactor(source, fixer_names, ignore=None):
     Skip if ignore string is produced in the refactored code.
 
     """
-    from lib2to3.pgen2 import parse
     try:
         new_text = refactor_with_2to3(source,
                                       fixer_names=fixer_names)
@@ -1653,7 +1653,6 @@ def refactor_with_2to3(source_text, fixer_names):
     Return the refactored source code.
 
     """
-    from lib2to3.refactor import RefactoringTool
     fixers = ['lib2to3.fixes.fix_' + name for name in fixer_names]
     tool = RefactoringTool(fixer_names=fixers, explicit=fixers)
     return unicode(tool.refactor_string(source_text, name=''))

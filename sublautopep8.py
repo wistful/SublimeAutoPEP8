@@ -18,11 +18,11 @@ except ImportError:
 
 
 try:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "packages_py2"))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "packages_py2")))
     import sublimeautopep8lib.autopep8 as autopep8
     from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
 except ImportError:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "packages_py3"))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "packages_py3")))
     import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
     from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
     from AutoPEP8.sublimeautopep8lib.common import handle_threads
@@ -125,8 +125,9 @@ class AutoPep8OutputCommand(sublime_plugin.TextCommand):
 
 class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
 
-    def run(self, edit, text, region):
-        region = sublime.Region(*region)
+    def run(self, edit, text, a, b):
+        print(a, b, text)
+        region = sublime.Region(a, b)
         self.view.replace(edit, region, text)
 
     def is_visible(self, *args):

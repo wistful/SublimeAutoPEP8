@@ -2,9 +2,7 @@ import os
 from collections import namedtuple
 import re
 import difflib
-
 import threading
-import re
 
 import sublime
 
@@ -158,9 +156,9 @@ def handle_threads(threads, preview, preview_output='',
             # format view
             elif not preview and view:
                 state = save_state(view)
-                region = (args["region"].a, args["region"].b)
                 view.run_command("auto_pep8_replace", {"text": out_data,
-                                                       "region": region})
+                                                       "a": args["region"].a,
+                                                       "b": args["region"].b})
                 restore_state(view, state)
             # format file
             elif not preview and not view:
