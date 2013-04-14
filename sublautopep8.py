@@ -126,7 +126,7 @@ class AutoPep8OutputCommand(sublime_plugin.TextCommand):
 class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, text, a, b):
-        region = sublime.Region(long(a), long(b))
+        region = sublime.Region(int(a), int(b))
         self.view.replace(edit, region, text)
 
     def is_visible(self, *args):
