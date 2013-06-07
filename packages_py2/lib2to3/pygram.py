@@ -11,8 +11,25 @@ from .pgen2 import token
 from .pgen2 import driver
 from . import pytree
 
+
+def fix_path(filepath):
+    import zipfile
+    import tempfile
+    if not os.path.exists(filepath):
+        _full_path = filepath.split(os.path.sep)
+        _arch_path = os.path.sep.join(_full_path[:-3])
+        _old_path = os.path.sep.join(_full_path[-3:])
+        _new_path = os.path.join(tempfile.gettempdir(), _old_path)
+        with zipfile.ZipFile(_arch_path, 'r') as arch:
+            arch.extract(_old_path.replace("\\", "/"), tempfile.gettempdir())
+        filepath = _new_path
+    return filepath
+
 # The grammar file
-_GRAMMAR_FILE = os.path.join(os.path.dirname(__file__), "Grammar.txt")
+_GRAMMAR_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                             "Grammar.txt"))
+
+_GRAMMAR_FILE = fix_path(_GRAMMAR_FILE)
 
 
 class Symbols(object):

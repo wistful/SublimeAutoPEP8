@@ -31,13 +31,13 @@ def fix_path(filepath):
         _old_path = os.path.sep.join(_full_path[-3:])
         _new_path = os.path.join(tempfile.gettempdir(), _old_path)
         with zipfile.ZipFile(_arch_path, 'r') as arch:
-            arch.extract(_old_path, tempfile.gettempdir())
+            arch.extract(_old_path.replace("\\", "/"), tempfile.gettempdir())
         filepath = _new_path
     return filepath
 
 # The pattern grammar file
-_PATTERN_GRAMMAR_FILE = os.path.join(os.path.dirname(__file__),
-                                     "PatternGrammar.txt")
+_PATTERN_GRAMMAR_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                        "PatternGrammar.txt"))
 _PATTERN_GRAMMAR_FILE = fix_path(_PATTERN_GRAMMAR_FILE)
 
 
