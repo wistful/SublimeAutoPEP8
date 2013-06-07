@@ -20,9 +20,24 @@ from .pgen2 import driver, literals, token, tokenize, parse, grammar
 from . import pytree
 from . import pygram
 
-# The pattern grammar file
+
+def fix_path(filepath):
+    import zipfile
+    import tempfile
+    if not os.path.exists(filepath):
+        _full_path = filepath.split(os.path.sep)
+        _arch_path = os.path.sep.join(_full_path[:-3])
+        _old_path = os.path.sep.join(_full_path[-3:])
+        _new_path = os.path.join(tempfile.gettempdir(), _old_path)
+        with zipfile.ZipFile(_arch_path, 'r') as arch:
+            arch.extract(_old_path.replace("\\", "/"), tempfile.gettempdir())
+        filepath = _new_path
+    return filepath
+
 _PATTERN_GRAMMAR_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                     "PatternGrammar.txt"))
+                                        "PatternGrammar.txt"))
+
+_PATTERN_GRAMMAR_FILE = fix_path(_PATTERN_GRAMMAR_FILE)
 
 
 class PatternSyntaxError(Exception):
