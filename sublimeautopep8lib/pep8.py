@@ -45,7 +45,7 @@ W warnings
 700 statements
 900 syntax error
 """
-__version__ = '1.4.6a0'
+__version__ = '1.4.6'
 
 import os
 import sys
@@ -63,7 +63,7 @@ except ImportError:
     from ConfigParser import RawConfigParser
 
 DEFAULT_EXCLUDE = '.svn,CVS,.bzr,.hg,.git,__pycache__'
-DEFAULT_IGNORE = 'E226,E24'
+DEFAULT_IGNORE = 'E123,E226,E24'
 if sys.platform == 'win32':
     DEFAULT_CONFIG = os.path.expanduser(r'~\.pep8')
 else:
@@ -381,7 +381,8 @@ def indentation(logical_line, previous_logical, indent_char,
         yield 0, "E113 unexpected indentation"
 
 
-def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
+def continued_indentation(logical_line, tokens, indent_level, hang_closing,
+                          noqa, verbose):
     r"""
     Continuation lines should align wrapped elements either vertically using
     Python's implicit line joining inside parentheses, brackets and braces, or
@@ -457,17 +458,19 @@ def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
                 # an unbracketed continuation line (ie, backslash)
                 open_row = 0
             hang = rel_indent[row] - rel_indent[open_row]
-            visual_indent = indent_chances.get(start[1])
+            close_bracket = (token_type == tokenize.OP and text in ']})')
+            visual_indent = (not close_bracket and hang > 0 and
+                             indent_chances.get(start[1]))
 
-            if token_type == tokenize.OP and text in ']})':
-                # this line starts with a closing bracket
-                if indent[depth]:
-                    if start[1] != indent[depth]:
-                        yield (start, "E124 closing bracket does not match "
-                               "visual indentation")
-                elif hang:
-                    yield (start, "E123 closing bracket does not match "
-                           "indentation of opening bracket's line")
+            if close_bracket and indent[depth]:
+                # closing bracket for visual indent
+                if start[1] != indent[depth]:
+                    yield (start, "E124 closing bracket does not match "
+                           "visual indentation")
+            elif close_bracket and not hang:
+                # closing bracket matches indentation of opening bracket's line
+                if hang_closing:
+                    yield start, "E133 closing bracket is missing indentation"
             elif visual_indent is True:
                 # visual indent is verified
                 if not indent[depth]:
@@ -481,7 +484,9 @@ def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
                        "under-indented for visual indent")
             elif hang == 4 or (indent_next and rel_indent[row] == 8):
                 # hanging indent is verified
-                pass
+                if close_bracket and not hang_closing:
+                    yield (start, "E123 closing bracket does not match "
+                           "indentation of opening bracket's line")
             else:
                 # indent is broken
                 if hang <= 0:
@@ -533,6 +538,7 @@ def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
                 for idx in range(row, -1, -1):
                     if parens[idx]:
                         parens[idx] -= 1
+                        rel_indent[row] = rel_indent[idx]
                         break
             assert len(indent) == depth + 1
             if start[1] not in indent_chances:
@@ -541,7 +547,7 @@ def continued_indentation(logical_line, tokens, indent_level, noqa, verbose):
 
         last_token_multiline = (start[0] != end[0])
 
-    if indent_next and rel_indent[-1] == 4:
+    if indent_next and expand_indent(line) == indent_level + 4:
         yield (last_indent, "E125 continuation line does not distinguish "
                "itself from next logical line")
 
@@ -840,19 +846,21 @@ def compound_statements(logical_line):
     line = logical_line
     last_char = len(line) - 1
     found = line.find(':')
-    if -1 < found < last_char:
+    while -1 < found < last_char:
         before = line[:found]
         if (before.count('{') <= before.count('}') and  # {'a': 1} (dict)
             before.count('[') <= before.count(']') and  # [1:2] (slice)
             before.count('(') <= before.count(')') and  # (Python 3 annotation)
                 not LAMBDA_REGEX.search(before)):       # lambda x: x
             yield found, "E701 multiple statements on one line (colon)"
+        found = line.find(':', found + 1)
     found = line.find(';')
-    if -1 < found:
+    while -1 < found:
         if found < last_char:
             yield found, "E702 multiple statements on one line (semicolon)"
         else:
             yield found, "E703 statement ends with a semicolon"
+        found = line.find(';', found + 1)
 
 
 def explicit_line_join(logical_line, tokens):
@@ -1014,7 +1022,6 @@ if '' == ''.encode():
             return f.readlines()
         finally:
             f.close()
-
     isidentifier = re.compile(r'[a-zA-Z_]\w*').match
     stdin_get_value = sys.stdin.read
 else:
@@ -1032,7 +1039,6 @@ else:
             return f.readlines()
         finally:
             f.close()
-
     isidentifier = str.isidentifier
 
     def stdin_get_value():
@@ -1181,6 +1187,7 @@ class Checker(object):
         self._logical_checks = options.logical_checks
         self._ast_checks = options.ast_checks
         self.max_line_length = options.max_line_length
+        self.hang_closing = options.hang_closing
         self.verbose = options.verbose
         self.filename = filename
         if filename is None:
@@ -1198,14 +1205,24 @@ class Checker(object):
                 self.lines = []
         else:
             self.lines = lines
+        if self.lines:
+            ord0 = ord(self.lines[0][0])
+            if ord0 in (0xef, 0xfeff):  # Strip the UTF-8 BOM
+                if ord0 == 0xfeff:
+                    self.lines[0] = self.lines[0][1:]
+                elif self.lines[0][:3] == '\xef\xbb\xbf':
+                    self.lines[0] = self.lines[0][3:]
         self.report = report or options.report
         self.report_error = self.report.error
 
     def report_invalid_syntax(self):
         exc_type, exc = sys.exc_info()[:2]
-        offset = exc.args[1]
-        if len(offset) > 2:
-            offset = offset[1:3]
+        if len(exc.args) > 1:
+            offset = exc.args[1]
+            if len(offset) > 2:
+                offset = offset[1:3]
+        else:
+            offset = (1, 0)
         self.report_error(offset[0], offset[1] or 0,
                           'E901 %s: %s' % (exc_type.__name__, exc.args[0]),
                           self.report_invalid_syntax)
@@ -1322,7 +1339,7 @@ class Checker(object):
     def check_ast(self):
         try:
             tree = compile(''.join(self.lines), '', 'exec', PyCF_ONLY_AST)
-        except SyntaxError:
+        except (SyntaxError, TypeError):
             return self.report_invalid_syntax()
         for name, cls, _ in self._ast_checks:
             checker = cls(tree, self.filename)
@@ -1579,7 +1596,7 @@ class StyleGuide(object):
             options.ignore = tuple(DEFAULT_IGNORE.split(','))
         else:
             # Ignore all checks which are not explicitly selected
-            options.ignore = tuple(options.ignore or options.select and ('',))
+            options.ignore = ('',) if options.select else tuple(options.ignore)
         options.benchmark_keys = BENCHMARK_KEYS[:]
         options.ignore_code = self.ignore_code
         options.physical_checks = self.get_checks('physical_line')
@@ -1632,23 +1649,26 @@ class StyleGuide(object):
                 print('directory ' + root)
             counters['directories'] += 1
             for subdir in sorted(dirs):
-                if self.excluded(os.path.join(root, subdir)):
+                if self.excluded(subdir, root):
                     dirs.remove(subdir)
             for filename in sorted(files):
                 # contain a pattern that matches?
                 if ((filename_match(filename, filepatterns) and
-                     not self.excluded(filename))):
+                     not self.excluded(filename, root))):
                     runner(os.path.join(root, filename))
 
-    def excluded(self, filename):
+    def excluded(self, filename, parent=None):
         """
         Check if options.exclude contains a pattern that matches filename.
         """
+        if not self.options.exclude:
+            return False
         basename = os.path.basename(filename)
-        return any((filename_match(filename, self.options.exclude,
-                                   default=False),
-                    filename_match(basename, self.options.exclude,
-                                   default=False)))
+        if filename_match(basename, self.options.exclude):
+            return True
+        if parent:
+            filename = os.path.join(parent, filename)
+        return filename_match(filename, self.options.exclude)
 
     def ignore_code(self, code):
         """
@@ -1671,15 +1691,16 @@ class StyleGuide(object):
             (codes, args) = attrs
             if any(not (code and self.ignore_code(code)) for code in codes):
                 checks.append((check.__name__, check, args))
-        return sorted(checks, key=lambda item: item[0])
+        return sorted(checks)
 
 
 def get_parser(prog='pep8', version=__version__):
     parser = OptionParser(prog=prog, version=version,
                           usage="%prog [options] input ...")
     parser.config_options = [
-        'exclude', 'filename', 'select', 'ignore', 'max-line-length', 'count',
-        'format', 'quiet', 'show-pep8', 'show-source', 'statistics', 'verbose']
+        'exclude', 'filename', 'select', 'ignore', 'max-line-length',
+        'hang-closing', 'count', 'format', 'quiet', 'show-pep8',
+        'show-source', 'statistics', 'verbose']
     parser.add_option('-v', '--verbose', default=0, action='count',
                       help="print status messages, or debug with -vv")
     parser.add_option('-q', '--quiet', default=0, action='count',
@@ -1714,6 +1735,9 @@ def get_parser(prog='pep8', version=__version__):
                       default=MAX_LINE_LENGTH,
                       help="set maximum allowed line length "
                            "(default: %default)")
+    parser.add_option('--hang-closing', action='store_true',
+                      help="hang closing bracket instead of matching "
+                           "indentation of opening bracket's line")
     parser.add_option('--format', metavar='format', default='default',
                       help="set the error format [default|pylint|<custom>]")
     parser.add_option('--diff', action='store_true',
