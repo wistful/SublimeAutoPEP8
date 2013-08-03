@@ -55,7 +55,6 @@ import token
 import tokenize
 from optparse import OptionParser
 import difflib
-import tempfile
 
 from lib2to3.pgen2 import parse
 from lib2to3.pgen2 import tokenize as lib2to3_tokenize
@@ -64,7 +63,10 @@ from lib2to3.refactor import RefactoringTool
 module_path = os.path.abspath(__file__)
 plugin_dir = os.path.abspath(os.path.join(os.path.dirname(module_path), '..'))
 sys.path.insert(0, plugin_dir)
-import sublimeautopep8lib.pep8 as pep8
+try:
+    import sublimeautopep8lib.pep8 as pep8
+except ImportError:
+    import AutoPEP8.sublimeautopep8lib.pep8 as pep8
 sys.path.remove(plugin_dir)
 # finish importing module
 
@@ -924,7 +926,7 @@ def refactor(source, fixer_names, ignore=None):
     try:
         new_text = refactor_with_2to3(source,
                                       fixer_names=fixer_names)
-    except (pgen2.parse.ParseError,
+    except (parse.ParseError,
             SyntaxError,
             UnicodeDecodeError,
             UnicodeEncodeError):
