@@ -35,7 +35,14 @@ Once you install Package Control, restart ST2 and bring up the Command Palette (
             // show Format/Preview menu items only for views
             // with syntax from `syntax_list`
             // value is base filename of the .tmLanguage syntax files
-            "syntax_list": ["Python"]
+            "syntax_list": ["Python"],
+
+            // Behaviour for right click context menu (Format/Preview PEP8)
+            // "always": menu appears always, even folder doesn't contain *.py files
+            // "never":  menu never appears
+            // "ifneed": menu appears only if path or childs contain *.py file
+            "file_menu_behaviour": "ifneed",
+            "file_menu_search_depth": 3  // max search depth, uses for 'ifneed' mode
         }
     }
 }
