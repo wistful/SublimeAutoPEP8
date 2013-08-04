@@ -44,6 +44,13 @@ DEFAULT_SEARCH_DEPTH = 3
 DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
 
 
+def _next(iter_obj):
+    try:
+        return iter_obj.next()
+    except AttributeError:
+        return iter_obj.__next__()
+
+
 def cfg(key, default=None, view=None):
     view = view or sublime.active_window().active_view()
     prj_cfg = view.settings().get("sublimeautopep8", {})
@@ -185,7 +192,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             depth_path = '*/' * step + '*.py'
             search_path = os.path.join(path, depth_path)
             try:
-                print(glob.iglob(search_path).next())
+                _next(glob.iglob(search_path))
                 return True
             except StopIteration:
                 pass
