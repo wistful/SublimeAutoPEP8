@@ -77,9 +77,12 @@ def pep8_params():
     if settings("list-fixes", None):
         params.append("--{0}={1}".format(opt, settings(opt)))
 
-    for opt in ("verbose", "aggressive"):
+    for opt in ("aggressive",):
         opt_count = settings(opt, 0)
         params.extend(["--" + opt] * opt_count)
+
+    # use verbose==2 to catch non-fixed issues
+    params.extend(["--" + "verbose"] * 2)
 
     # autopep8.parse_args raises exception without it
     params.append('fake-arg')

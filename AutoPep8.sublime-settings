@@ -13,9 +13,6 @@
     // enable possibly unsafe changes (E711, E712) 
     "aggressive": 0,
     
-    // verbose level
-    "verbose": 1,
-    
     "format_on_save": false,
     "show_output_panel": true,
     // show panel with message: no issues to fixed
