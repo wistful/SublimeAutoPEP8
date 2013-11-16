@@ -6,7 +6,7 @@ Support ST2 and ST3
 
 Features:
     format / preview code according PEP8
-    format / preview multi-selected text
+    format / preview selected text
     format / preview all python modules in folder
     side bar menu
     formated code while saving
