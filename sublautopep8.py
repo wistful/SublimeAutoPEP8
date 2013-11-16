@@ -21,13 +21,13 @@ except ImportError:
 try:
     sys.path.insert(0,
                     os.path.abspath(os.path.join(os.path.dirname(__file__),
-                    "packages_py2")))
+                                                 "packages_py2")))
     import sublimeautopep8lib.autopep8 as autopep8
     from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
 except ImportError:
     sys.path.insert(0,
                     os.path.abspath(os.path.join(os.path.dirname(__file__),
-                    "packages_py3")))
+                                                 "packages_py3")))
     import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
     from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
     from AutoPEP8.sublimeautopep8lib.common import handle_threads
@@ -107,12 +107,14 @@ class AutoPep8Command(sublime_plugin.TextCommand):
         stdoutput = StringIO()
 
         for region, substr in self.sel():
-            args = {'pep8_params': pep8_params(), 'view': self.view,
-                    'filename': self.view.file_name(),
-                    'source': substr,
-                    'preview': preview,
-                    'stdoutput': stdoutput,
-                    'edit': edit, 'region': region}
+            args = {
+                'pep8_params': pep8_params(), 'view': self.view,
+                'filename': self.view.file_name(),
+                'source': substr,
+                'preview': preview,
+                'stdoutput': stdoutput,
+                'edit': edit, 'region': region
+            }
             queue.put(args)
             if len(threads) < max_threads:
                 th = AutoPep8Thread(queue)
@@ -164,9 +166,11 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             stdoutput = StringIO()
             in_data = open(path, 'r').read()
 
-            args = {'pep8_params': pep8_params(), 'filename': path,
-                    'source': in_data, 'preview': preview,
-                    'stdoutput': stdoutput}
+            args = {
+                'pep8_params': pep8_params(), 'filename': path,
+                'source': in_data, 'preview': preview,
+                'stdoutput': stdoutput
+            }
 
             queue.put(args)
             if len(threads) < max_threads:
