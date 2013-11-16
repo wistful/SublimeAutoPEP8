@@ -1,3 +1,7 @@
+AutoPEP8 1.0.5 (2013/11/17):
+    * autopep8 -> 0.9.6
+    - "verbose" option was removed from the settings
+
 AutoPEP8 1.0.4 (2013/08/04):
 + different behaviour for right click context menu (issue #22)
     Option "file_menu_behaviour":
