@@ -4,6 +4,9 @@ import re
 import difflib
 import threading
 
+from contextlib import contextmanager
+import sys
+
 import sublime
 
 try:
@@ -29,6 +32,16 @@ ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
 PATTERN = re.compile(r"Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)")
 
 
+@contextmanager
+def custom_stderr(stderr):
+    try:
+        _stderr = sys.stderr
+        sys.stderr = stderr
+        yield
+    finally:
+        sys.stderr = _stderr
+
+
 class AutoPep8Thread(threading.Thread):
 
     """docstring for AutoPep8Thread"""
@@ -42,9 +55,8 @@ class AutoPep8Thread(threading.Thread):
             args = self.queue.get()
             if args is None:
                 break
-            new = autopep8.fix_string(args['source'],
-                                      args['pep8_params'],
-                                      args['stdoutput'])
+            with custom_stderr(args['stdoutput']):
+                new = autopep8.fix_code(args['source'], args['pep8_params'])
             if args['preview']:
                 new = difflib.unified_diff(
                     StringIO(args['source']).readlines(),
