@@ -1,3 +1,6 @@
+AutoPEP8 1.0.6 (2013/12/24):
+    + added option 'avoid_new_line_in_select_mode' to remove last empty line in select mode
+
 AutoPEP8 1.0.5 (2013/11/17):
     * autopep8 -> 0.9.6
     - "verbose" option was removed from the settings
