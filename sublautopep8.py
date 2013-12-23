@@ -147,6 +147,11 @@ class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, text, a, b):
         region = sublime.Region(int(a), int(b))
+        remove_last_line = cfg('avoid_new_line_in_select_mode', False)
+        if region.b - region.a < self.view.size() and remove_last_line:
+            lines = text.split('\n')
+            if not lines[-1]:
+                text = '\n'.join(lines[:-1])
         self.view.replace(edit, region, text)
 
     def is_visible(self, *args):
