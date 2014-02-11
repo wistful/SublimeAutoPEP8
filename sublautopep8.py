@@ -75,8 +75,8 @@ def pep8_params():
     # use verbose==2 to catch non-fixed issues
     params.extend(["--" + "verbose"] * 2)
 
-    # autopep8.parse_args raises exception without it
-    params.append('fake-arg')
+    # autopep8.parse_args requirea at least one positional argument
+    params.append('fake-file')
     return autopep8.parse_args(params)[0]
 
 
