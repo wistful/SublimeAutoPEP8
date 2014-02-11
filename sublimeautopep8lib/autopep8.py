@@ -46,9 +46,9 @@ import fnmatch
 import inspect
 
 try:
-    from StringIO import StringIO
+    import StringIO as io
 except ImportError:
-    from io import StringIO
+    import io
 
 import locale
 import optparse
@@ -60,17 +60,10 @@ import token
 import tokenize
 import warnings
 
-# import modules exactly from plugin folder
-module_path = os.path.abspath(__file__)
-plugin_dir = os.path.abspath(os.path.join(os.path.dirname(module_path), '..'))
-sys.path.insert(0, plugin_dir)
 try:
-    import sublimeautopep8lib.pep8 as pep8
+    from sublimeautopep8lib import pep8
 except ImportError:
-    import AutoPEP8.sublimeautopep8lib.pep8 as pep8
-sys.path.remove(plugin_dir)
-# finish importing module
-
+    from AutoPEP8.sublimeautopep8lib import pep8
 
 try:
     unicode
@@ -366,7 +359,7 @@ class FixPEP8(object):
         if contents is None:
             self.source = read_from_filename(filename, readlines=True)
         else:
-            sio = StringIO(contents)
+            sio = io.StringIO(contents)
             self.source = sio.readlines()
         self.newline = find_newline(self.source)
         self.options = options
@@ -504,7 +497,7 @@ class FixPEP8(object):
         logical_start = []
         logical_end = []
         last_newline = True
-        sio = StringIO(''.join(self.source))
+        sio = io.StringIO(''.join(self.source))
         parens = 0
         for t in tokenize.generate_tokens(sio.readline):
             if t[0] in [tokenize.COMMENT, tokenize.DEDENT,
@@ -779,7 +772,7 @@ class FixPEP8(object):
         indent = _get_indentation(target)
         source = target[len(indent):]
         assert source.lstrip() == source
-        sio = StringIO(source)
+        sio = io.StringIO(source)
 
         # Check for multiline string.
         try:
@@ -975,7 +968,7 @@ def fix_e26(source, aggressive=False, select='', ignore=''):
         include_docstrings=True) | set(commented_out_code_lines(source))
 
     fixed_lines = []
-    sio = StringIO(source)
+    sio = io.StringIO(source)
     for (line_number, line) in enumerate(sio.readlines(), start=1):
         if (
             line.lstrip().startswith('#') and
@@ -1068,7 +1061,7 @@ def find_newline(source):
 
 def _get_indentword(source):
     """Return indentation type."""
-    sio = StringIO(source)
+    sio = io.StringIO(source)
     indent_word = '    '  # Default in case source has no indentation
     try:
         for t in tokenize.generate_tokens(sio.readline):
@@ -1676,7 +1669,7 @@ def multiline_string_lines(source, include_docstrings=False):
     Docstrings are ignored.
 
     """
-    sio = StringIO(source)
+    sio = io.StringIO(source)
     line_numbers = set()
     previous_token_type = ''
     try:
@@ -1708,7 +1701,7 @@ def commented_out_code_lines(source):
     clutter.
 
     """
-    sio = StringIO(source)
+    sio = io.StringIO(source)
     line_numbers = []
     try:
         for t in tokenize.generate_tokens(sio.readline):
@@ -1802,7 +1795,7 @@ def fix_code(source, options=None):
     if not isinstance(source, unicode):
         source = source.decode(locale.getpreferredencoding(False))
 
-    sio = StringIO(source)
+    sio = io.StringIO(source)
     return fix_lines(sio.readlines(), options=options)
 
 
@@ -1866,7 +1859,7 @@ def fix_file(filename, options=None, output=None):
     fixed_source = fix_lines(fixed_source, options, filename=filename)
 
     if options.diff:
-        new = StringIO(fixed_source)
+        new = io.StringIO(fixed_source)
         new = new.readlines()
         diff = get_diff_text(original_source, new, filename)
         if output:
