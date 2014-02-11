@@ -187,7 +187,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             if os.path.isdir(path):
                 for dirpath, dirnames, filenames in os.walk(path):
                     for filename in filenames:
-                        if filename.endswith('py'):
+                        if filename.endswith('.py'):
                             yield os.path.join(dirpath, filename)
 
     def has_pyfiles(self, path, depth):
@@ -199,28 +199,29 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
                 return True
             except StopIteration:
                 pass
-        else:
+        return False
+
+    def check_paths(self, paths):
+        if not paths:
             return False
+        depth = Settings('file_menu_search_depth', DEFAULT_SEARCH_DEPTH)
+        for path in paths:
+            if os.path.isdir(path) and self.has_pyfiles(path, depth):
+                return True
+            elif os.path.isfile(path) and path.endswith('.py'):
+                return True
+        return False
 
     def is_visible(self, *args, **kwd):
         behaviour = Settings('file_menu_behaviour',
                              DEFAULT_FILE_MENU_BEHAVIOUR)
         if behaviour == 'always':
             return True
-        if behaviour == 'never':
+        elif behaviour == 'never':
             return False
-
-        depth = Settings('file_menu_search_depth', DEFAULT_SEARCH_DEPTH)
-        paths = kwd.get('paths')
-        if not paths:
-            return False
-        for path in paths:
-            if os.path.isdir(path) and self.has_pyfiles(path, depth):
-                return True
-            if os.path.isfile(path) and path.endswith('py'):
-                return True
         else:
-            return False
+            # ifneed behaviour
+            return self.check_paths(kwd.get('paths'))
 
 
 class AutoPep8Listener(sublime_plugin.EventListener):
