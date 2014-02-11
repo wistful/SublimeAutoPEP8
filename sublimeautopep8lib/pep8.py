@@ -1691,7 +1691,7 @@ class StyleGuide(object):
             (codes, args) = attrs
             if any(not (code and self.ignore_code(code)) for code in codes):
                 checks.append((check.__name__, check, args))
-        return sorted(checks, key=lambda item: item[0])
+        return sorted(checks)
 
 
 def get_parser(prog='pep8', version=__version__):
