@@ -51,34 +51,25 @@ def _next(iter_obj):
         return iter_obj.__next__()
 
 
-def cfg(key, default=None, view=None):
-    view = view or sublime.active_window().active_view()
-    prj_cfg = view.settings().get("sublimeautopep8", {})
-    glob_cfg = sublime.load_settings(BASE_NAME)
-    return prj_cfg.get(key, glob_cfg.get(key, default))
-
-
-def cfg_fun(view=None):
-    view = view or sublime.active_window().active_view()
-    prj_cfg = view.settings().get("sublimeautopep8", {})
-    glob_cfg = sublime.load_settings(BASE_NAME)
-    return lambda key, default: prj_cfg.get(key, glob_cfg.get(key, default))
+def Settings(name, default):
+    view = sublime.active_window().active_view()
+    project_config = view.settings().get('sublimeautopep8', {})
+    global_config = sublime.load_settings(BASE_NAME)
+    return project_config.get(name, global_config.get(name, default))
 
 
 def pep8_params():
     params = ['-d']  # args for preview
 
     # read settings
-    settings = cfg_fun()
-    # settings = sublime.load_settings(BASE_NAME)
     for opt in ("ignore", "select", "max-line-length"):
-        params.append("--{0}={1}".format(opt, settings(opt, "")))
+        params.append("--{0}={1}".format(opt, Settings(opt, "")))
 
-    if settings("list-fixes", None):
-        params.append("--{0}={1}".format(opt, settings(opt)))
+    if Settings("list-fixes", None):
+        params.append("--{0}={1}".format(opt, Settings(opt)))
 
     for opt in ("aggressive",):
-        opt_count = settings(opt, 0)
+        opt_count = Settings(opt, 0)
         params.extend(["--" + opt] * opt_count)
 
     # use verbose==2 to catch non-fixed issues
@@ -101,7 +92,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
             yield region, self.view.substr(region)
 
     def run(self, edit, preview=True):
-        max_threads = cfg('max-threads', 5)
+        max_threads = Settings('max-threads', 5)
         threads = []
         queue = Queue()
         stdoutput = StringIO()
@@ -128,7 +119,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
-        syntax_list = cfg('syntax_list', ["Python"])
+        syntax_list = Settings('syntax_list', ["Python"])
         filename = os.path.basename(view_syntax)
         return os.path.splitext(filename)[0] in syntax_list
 
@@ -147,7 +138,7 @@ class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, text, a, b):
         region = sublime.Region(int(a), int(b))
-        remove_last_line = cfg('avoid_new_line_in_select_mode', False)
+        remove_last_line = Settings('avoid_new_line_in_select_mode', False)
         if region.b - region.a < self.view.size() and remove_last_line:
             lines = text.split('\n')
             if not lines[-1]:
@@ -163,7 +154,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def run(self, paths=None, preview=True):
         if not paths:
             return
-        max_threads = cfg('max-threads', 5)
+        max_threads = Settings('max-threads', 5)
         threads = []
         queue = Queue()
 
@@ -212,13 +203,14 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             return False
 
     def is_visible(self, *args, **kwd):
-        behaviour = cfg('file_menu_behaviour', DEFAULT_FILE_MENU_BEHAVIOUR)
+        behaviour = Settings('file_menu_behaviour',
+                             DEFAULT_FILE_MENU_BEHAVIOUR)
         if behaviour == 'always':
             return True
         if behaviour == 'never':
             return False
 
-        depth = cfg('file_menu_search_depth', DEFAULT_SEARCH_DEPTH)
+        depth = Settings('file_menu_search_depth', DEFAULT_SEARCH_DEPTH)
         paths = kwd.get('paths')
         if not paths:
             return False
@@ -234,15 +226,15 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save_async(self, view):
-        if not cfg('format_on_save', False):
+        if not Settings('format_on_save', False):
             return
         view_syntax = view.settings().get('syntax')
-        syntax_list = cfg('syntax_list', ["Python"])
+        syntax_list = Settings('syntax_list', ["Python"])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
             view.run_command("auto_pep8", {"preview": False})
 
     def on_pre_save(self, view):
-        if not cfg('format_on_save', False):
+        if not Settings('format_on_save', False):
             return
         if sublime.version() < '3000':
             self.on_pre_save_async(view)
