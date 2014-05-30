@@ -1,30 +1,26 @@
 # coding=utf-8
-import os
-import sys
-from collections import namedtuple
-import re
-import glob
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
-
 import sublime
 import sublime_plugin
 
-try:
+from collections import namedtuple
+import glob
+import os
+import sys
+import re
+
+if sublime.version() < '3000':
     from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+    from Queue import Queue
 
-
-try:
     sys.path.insert(0,
                     os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                  "packages_py2")))
     import sublimeautopep8lib.autopep8 as autopep8
     from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
-except ImportError:
+else:
+    from queue import Queue
+    from io import StringIO
+
     sys.path.insert(0,
                     os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                  "packages_py3")))
