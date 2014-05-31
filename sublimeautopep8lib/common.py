@@ -1,31 +1,22 @@
-import os
 from collections import namedtuple
-import re
-import difflib
-import threading
-
 from contextlib import contextmanager
+import difflib
+import os
+import re
 import sys
+import threading
 
 import sublime
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
-try:
-    import sublimeautopep8lib.autopep8 as autopep8
-except ImportError:
-    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
-
-
-plugin_path = os.path.split(os.path.abspath(__file__))[0]
-pycoding = re.compile("coding[:=]\s*([-\w.]+)")
-if sublime.platform() == 'windows':
-    BASE_NAME = 'AutoPep8 (Windows).sublime-settings'
+if sublime.version() < '3000':
+    from sublimeautopep8lib import autopep8
+    from sublimeautopep8lib.helper import StringIO
+    from sublimeautopep8lib.helper import USER_CONFIG_NAME
 else:
-    BASE_NAME = 'AutoPep8.sublime-settings'
+    from AutoPEP8.sublimeautopep8lib import autopep8
+    from AutoPEP8.sublimeautopep8lib.helper import StringIO
+    from AutoPEP8.sublimeautopep8lib.helper import USER_CONFIG_NAME
+
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
 
@@ -45,6 +36,7 @@ def custom_stderr(stderr):
 class AutoPep8Thread(threading.Thread):
 
     """docstring for AutoPep8Thread"""
+
     def __init__(self, queue):
         super(AutoPep8Thread, self).__init__()
         self.queue = queue
@@ -106,7 +98,7 @@ def new_view(encoding, text):
 
 
 def show_panel(text, has_change):
-    settings = sublime.load_settings(BASE_NAME)
+    settings = sublime.load_settings(USER_CONFIG_NAME)
 
     if not settings.get('show_output_panel', False):
         return

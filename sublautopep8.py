@@ -1,43 +1,33 @@
 # coding=utf-8
-import sublime
-import sublime_plugin
-
 from collections import namedtuple
 import glob
 import os
-import sys
 import re
+import sys
+
+import sublime
+import sublime_plugin
 
 if sublime.version() < '3000':
-    from StringIO import StringIO
-    from Queue import Queue
-
-    sys.path.insert(0,
-                    os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                 "packages_py2")))
-    import sublimeautopep8lib.autopep8 as autopep8
-    from sublimeautopep8lib.common import AutoPep8Thread, handle_threads
+    from sublimeautopep8lib import autopep8
+    from sublimeautopep8lib.common import AutoPep8Thread
+    from sublimeautopep8lib.common import handle_threads
+    from sublimeautopep8lib.helper import Queue
+    from sublimeautopep8lib.helper import StringIO
+    from sublimeautopep8lib.helper import DEFAULT_SEARCH_DEPTH
+    from sublimeautopep8lib.helper import DEFAULT_FILE_MENU_BEHAVIOUR
+    from sublimeautopep8lib.helper import PLUGIN_PATH
+    from sublimeautopep8lib.helper import USER_CONFIG_NAME
 else:
-    from queue import Queue
-    from io import StringIO
-
-    sys.path.insert(0,
-                    os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                 "packages_py3")))
-    import AutoPEP8.sublimeautopep8lib.autopep8 as autopep8
+    from AutoPEP8.sublimeautopep8lib import autopep8
     from AutoPEP8.sublimeautopep8lib.common import AutoPep8Thread
     from AutoPEP8.sublimeautopep8lib.common import handle_threads
-
-
-plugin_path = os.path.split(os.path.abspath(__file__))[0]
-pycoding = re.compile("coding[:=]\s*([-\w.]+)")
-if sublime.platform() == 'windows':
-    BASE_NAME = 'AutoPep8 (Windows).sublime-settings'
-else:
-    BASE_NAME = 'AutoPep8.sublime-settings'
-
-DEFAULT_SEARCH_DEPTH = 3
-DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
+    from AutoPEP8.sublimeautopep8lib.helper import Queue
+    from AutoPEP8.sublimeautopep8lib.helper import StringIO
+    from AutoPEP8.sublimeautopep8lib.helper import DEFAULT_SEARCH_DEPTH
+    from AutoPEP8.sublimeautopep8lib.helper import DEFAULT_FILE_MENU_BEHAVIOUR
+    from AutoPEP8.sublimeautopep8lib.helper import PLUGIN_PATH
+    from AutoPEP8.sublimeautopep8lib.helper import USER_CONFIG_NAME
 
 
 def _next(iter_obj):
@@ -50,7 +40,7 @@ def _next(iter_obj):
 def Settings(name, default):
     view = sublime.active_window().active_view()
     project_config = view.settings().get('sublimeautopep8', {})
-    global_config = sublime.load_settings(BASE_NAME)
+    global_config = sublime.load_settings(USER_CONFIG_NAME)
     return project_config.get(name, global_config.get(name, default))
 
 
