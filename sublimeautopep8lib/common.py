@@ -9,11 +9,32 @@ import threading
 import sublime
 
 if sublime.version() < '3000':
+    from Queue import Queue
+    from StringIO import StringIO
+
     from sublimeautopep8lib import autopep8
-    from sublimeautopep8lib.helper import helper
+
+    PLUGIN_PATH = os.path.abspath(os.path.split(os.path.dirname(__file__))[0])
+    sys.path.insert(0, os.path.join(PLUGIN_PATH, "packages_py2"))
+
 else:
+    from io import StringIO
+    from queue import Queue
+
     from AutoPEP8.sublimeautopep8lib import autopep8
-    from AutoPEP8.sublimeautopep8lib import helper
+
+    PLUGIN_PATH = os.path.abspath(os.path.dirname(__file__))
+    sys.path.insert(0, os.path.join(PLUGIN_PATH, "packages_py3"))
+
+
+DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
+DEFAULT_SEARCH_DEPTH = 3
+PYCODING = re.compile("coding[:=]\s*([-\w.]+)")
+
+if sublime.platform() == 'windows':
+    USER_CONFIG_NAME = 'AutoPep8 (Windows).sublime-settings'
+else:
+    USER_CONFIG_NAME = 'AutoPep8.sublime-settings'
 
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
@@ -49,8 +70,8 @@ class AutoPep8Thread(threading.Thread):
                 new = autopep8.fix_code(args['source'], args['pep8_params'])
             if args['preview']:
                 new = difflib.unified_diff(
-                    helper.StringIO(args['source']).readlines(),
-                    helper.StringIO(new).readlines(),
+                    StringIO(args['source']).readlines(),
+                    StringIO(new).readlines(),
                     'original:' + args['filename'],
                     'fixed:' + args['filename'])
 
@@ -96,7 +117,7 @@ def new_view(encoding, text):
 
 
 def show_panel(text, has_change):
-    settings = sublime.load_settings(helper.USER_CONFIG_NAME)
+    settings = sublime.load_settings(USER_CONFIG_NAME)
 
     if not settings.get('show_output_panel', False):
         return

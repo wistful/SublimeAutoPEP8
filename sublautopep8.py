@@ -11,11 +11,9 @@ import sublime_plugin
 if sublime.version() < '3000':
     from sublimeautopep8lib import autopep8
     from sublimeautopep8lib import common
-    from sublimeautopep8lib import helper
 else:
     from AutoPEP8.sublimeautopep8lib import autopep8
     from AutoPEP8.sublimeautopep8lib import common
-    from AutoPEP8.sublimeautopep8lib import helper
 
 
 def _next(iter_obj):
@@ -28,7 +26,7 @@ def _next(iter_obj):
 def Settings(name, default):
     view = sublime.active_window().active_view()
     project_config = view.settings().get('sublimeautopep8', {})
-    global_config = sublime.load_settings(helper.USER_CONFIG_NAME)
+    global_config = sublime.load_settings(common.USER_CONFIG_NAME)
     return project_config.get(name, global_config.get(name, default))
 
 
@@ -68,8 +66,8 @@ class AutoPep8Command(sublime_plugin.TextCommand):
     def run(self, edit, preview=True):
         max_threads = Settings('max-threads', 5)
         threads = []
-        queue = Queue()
-        stdoutput = helper.StringIO()
+        queue = common.Queue()
+        stdoutput = common.StringIO()
 
         for region, substr in self.sel():
             args = {
@@ -89,7 +87,8 @@ class AutoPep8Command(sublime_plugin.TextCommand):
         for _ in range(len(threads)):
             queue.put(None)
         if len(threads) > 0:
-            sublime.set_timeout(lambda: common.handle_threads(threads, preview), 100)
+            sublime.set_timeout(
+                lambda: common.handle_threads(threads, preview), 100)
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
@@ -130,10 +129,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             return
         max_threads = Settings('max-threads', 5)
         threads = []
-        queue = helper.Queue()
+        queue = common.Queue()
 
         for path in self.files(paths):
-            stdoutput = helper.StringIO()
+            stdoutput = common.StringIO()
             in_data = open(path, 'r').read()
 
             args = {
@@ -151,7 +150,8 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
         for _ in range(len(threads)):
             queue.put(None)
         if len(threads) > 0:
-            sublime.set_timeout(lambda: common.handle_threads(threads, preview), 100)
+            sublime.set_timeout(
+                lambda: common.handle_threads(threads, preview), 100)
 
     def files(self, paths):
         for path in paths:
@@ -178,7 +178,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def check_paths(self, paths):
         if not paths:
             return False
-        depth = Settings('file_menu_search_depth', helper.DEFAULT_SEARCH_DEPTH)
+        depth = Settings('file_menu_search_depth', common.DEFAULT_SEARCH_DEPTH)
         for path in paths:
             if os.path.isdir(path) and self.has_pyfiles(path, depth):
                 return True
@@ -188,7 +188,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self, *args, **kwd):
         behaviour = Settings('file_menu_behaviour',
-                             helper.DEFAULT_FILE_MENU_BEHAVIOUR)
+                             common.DEFAULT_FILE_MENU_BEHAVIOUR)
         if behaviour == 'always':
             return True
         elif behaviour == 'never':
