@@ -10,12 +10,10 @@ import sublime
 
 if sublime.version() < '3000':
     from sublimeautopep8lib import autopep8
-    from sublimeautopep8lib.helper import StringIO
-    from sublimeautopep8lib.helper import USER_CONFIG_NAME
+    from sublimeautopep8lib.helper import helper
 else:
     from AutoPEP8.sublimeautopep8lib import autopep8
-    from AutoPEP8.sublimeautopep8lib.helper import StringIO
-    from AutoPEP8.sublimeautopep8lib.helper import USER_CONFIG_NAME
+    from AutoPEP8.sublimeautopep8lib import helper
 
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
@@ -51,8 +49,8 @@ class AutoPep8Thread(threading.Thread):
                 new = autopep8.fix_code(args['source'], args['pep8_params'])
             if args['preview']:
                 new = difflib.unified_diff(
-                    StringIO(args['source']).readlines(),
-                    StringIO(new).readlines(),
+                    helper.StringIO(args['source']).readlines(),
+                    helper.StringIO(new).readlines(),
                     'original:' + args['filename'],
                     'fixed:' + args['filename'])
 
@@ -98,7 +96,7 @@ def new_view(encoding, text):
 
 
 def show_panel(text, has_change):
-    settings = sublime.load_settings(USER_CONFIG_NAME)
+    settings = sublime.load_settings(helper.USER_CONFIG_NAME)
 
     if not settings.get('show_output_panel', False):
         return
