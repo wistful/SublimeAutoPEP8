@@ -55,40 +55,32 @@ def pep8_params():
 class AutoPep8Command(sublime_plugin.TextCommand):
 
     def sel(self):
-        sels = self.view.sel()
-        if len(sels) == 1 and sels[0].a == sels[0].b:
-            sels = [namedtuple('sel', ['a', 'b'])(0, self.view.size())]
-
-        for sel in sels:
-            region = sublime.Region(sel.a, sel.b)
-            yield region, self.view.substr(region)
+        region = self.view.sel()[0]
+        if region.a == region.b:
+            region = sublime.Region(0, self.view.size())
+        return region, self.view.substr(region)
 
     def run(self, edit, preview=True):
-        max_threads = Settings('max-threads', 5)
-        threads = []
         queue = common.Queue()
         stdoutput = common.StringIO()
 
-        for region, substr in self.sel():
-            args = {
-                'pep8_params': pep8_params(), 'view': self.view,
-                'filename': self.view.file_name(),
-                'source': substr,
-                'preview': preview,
-                'stdoutput': stdoutput,
-                'edit': edit, 'region': region
-            }
-            queue.put(args)
-            if len(threads) < max_threads:
-                th = common.AutoPep8Thread(queue)
-                th.start()
-                threads.append(th)
+        region, substr = self.sel()
+        args = {
+            'pep8_params': pep8_params(), 'view': self.view,
+            'filename': self.view.file_name(),
+            'source': substr,
+            'preview': preview,
+            'stdoutput': stdoutput,
+            'edit': edit, 'region': region
+        }
+        queue.put(args) 
+        queue.put(None)
 
-        for _ in range(len(threads)):
-            queue.put(None)
-        if len(threads) > 0:
-            sublime.set_timeout(
-                lambda: common.handle_threads(threads, preview), 100)
+        th = common.AutoPep8Thread(queue)
+        th.start()
+
+        sublime.set_timeout(
+            lambda: common.handle_threads([th], preview), 100)
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
