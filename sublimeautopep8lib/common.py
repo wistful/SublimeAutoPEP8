@@ -4,12 +4,11 @@ import difflib
 import os
 import re
 import sys
-import threading
 
 import sublime
 
 if sublime.version() < '3000':
-    from Queue import Queue
+    from Queue import Queue  # NOQA
     from StringIO import StringIO
 
     from sublimeautopep8lib import autopep8
@@ -19,7 +18,7 @@ if sublime.version() < '3000':
 
 else:
     from io import StringIO
-    from queue import Queue
+    from queue import Queue  # NOQA
 
     from AutoPEP8.sublimeautopep8lib import autopep8
 
@@ -43,47 +42,97 @@ PATTERN = re.compile(r"Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)")
 
 
 @contextmanager
-def custom_stderr(stderr):
+def custom_stderr(stderr=None):
     try:
         _stderr = sys.stderr
-        sys.stderr = stderr
-        yield
+        sys.stderr = stderr or StringIO()
+        yield sys.stderr
     finally:
         sys.stderr = _stderr
 
 
-class AutoPep8Thread(threading.Thread):
+def set_timeout(func, delay):
+    if sublime.version() < '3000':
+        return sublime.set_timeout(func, delay)
+    else:
+        return sublime.set_timeout_async(func, delay)
 
-    """docstring for AutoPep8Thread"""
 
-    def __init__(self, queue):
-        super(AutoPep8Thread, self).__init__()
-        self.queue = queue
-        self.result = []
+def create_diff(source1, source2, filepath):
+    result = difflib.unified_diff(
+        StringIO(source1).readlines(),
+        StringIO(source2).readlines(),
+        'original:' + filepath,
+        'fixed:' + filepath)
 
-    def run(self):
-        while True:
-            args = self.queue.get()
-            if args is None:
-                break
-            with custom_stderr(args['stdoutput']):
-                new = autopep8.fix_code(args['source'], args['pep8_params'])
-            if args['preview']:
-                new = difflib.unified_diff(
-                    StringIO(args['source']).readlines(),
-                    StringIO(new).readlines(),
-                    'original:' + args['filename'],
-                    'fixed:' + args['filename'])
+    # fix issue with join two last lines
+    lines = [item for item in result]
+    if len(lines) >= 4 and lines[-2][-1] != '\n':
+        lines[-2] += '\n'
 
-                # fix issue with join two last lines
-                lines = [item for item in new]
-                if len(lines) >= 4 and lines[-2][-1] != '\n':
-                    lines[-2] += '\n'
+    return ''.join(lines) if len(lines) >= 3 else ''
 
-                new = ''.join(lines)
 
-            args['new'] = new
-            self.result.append(args)
+def replace_text(view, region, text):
+    state = save_state(view)
+    view.run_command(
+        "auto_pep8_replace", {"text": text, "a": region.a, "b": region.b})
+    restore_state(view, state)
+
+
+def show_result(result):
+    diffs = []
+    not_fixed = ""
+    has_changes = False
+    for command_result in result:
+        if 'diff' in command_result:
+            diffs.append(command_result['diff'])
+        not_fixed += command_result['not_fixed']
+        has_changes = has_changes or command_result.get('has_changes')
+
+    message = 'AutoPep8: No issues to fix.'
+    if has_changes:
+        message = 'AutoPep8: Issues were fixed.'
+    sublime.status_message(message)
+    show_panel(not_fixed, has_changes)
+
+    if diffs:
+        new_view('utf-8', '\n'.join(diffs))
+    # TODO: move delay value to config
+    set_timeout(lambda: sublime.status_message(''), 3000)
+
+
+def worker(queue, preview, pep8_params, result=None):
+    sublime.status_message('AutoPEP8: formatting ...')
+    if queue.empty():
+        return show_result(result)
+
+    result = result or []
+    command_result = {}
+    source, filepath, view, region = queue.get()
+    with custom_stderr() as stdoutput:
+        formatted = autopep8.fix_code(source, pep8_params)
+        if preview:
+            formatted = create_diff(source1=source, source2=formatted,
+                                    filepath=filepath)
+
+    command_result['not_fixed'] = find_not_fixed(stdoutput.getvalue(),
+                                                 filepath)
+    if formatted and formatted != source:
+        if not preview:
+            command_result['has_changes'] = True
+            if view:
+                replace_text(view, region, formatted)
+            else:
+                with open(filepath, 'w') as fd:
+                    fd.write(formatted)
+        else:
+            command_result['diff'] = formatted
+
+    result.append(command_result)
+
+    set_timeout(
+        lambda: worker(queue, preview, pep8_params, result), 0)
 
 
 def save_state(view):
@@ -140,7 +189,7 @@ def show_panel(text, has_change):
         "show_panel", {"panel": "output.autopep8"})
 
 
-def find_not_fixing(text, filepath):
+def find_not_fixed(text, filepath):
     result = ""
     last_to_fix = text.rfind("issue(s) to fix")
     if last_to_fix > 0:
@@ -150,55 +199,3 @@ def find_not_fixing(text, filepath):
                                                                       code)
             result += message
     return result
-
-
-def handle_threads(threads, preview, preview_output='',
-                   panel_output="", has_changes=False):
-    sublime.status_message('AutoPEP8: formatting ...')
-    new_threads = []
-    for th in threads:
-        if th.is_alive():
-            new_threads.append(th)
-            continue
-        if th.result is None:
-            continue
-        for args in th.result:
-            out_data = args['new']
-            view = args.get('view')
-            filename = args['filename']
-            panel_output += find_not_fixing(args['stdoutput'].getvalue(),
-                                            filename)
-            if not out_data or out_data == args['source'] \
-                    or (args['preview'] and len(out_data.split('\n')) < 3):
-                continue
-
-            has_changes = True
-            # preview file or view
-            if preview:
-                preview_output += out_data
-            # format view
-            elif not preview and view:
-                state = save_state(view)
-                view.run_command("auto_pep8_replace", {"text": out_data,
-                                                       "a": args["region"].a,
-                                                       "b": args["region"].b})
-                restore_state(view, state)
-            # format file
-            elif not preview and not view:
-                open(filename, 'w').write(out_data)
-
-    if len(new_threads) > 0:
-        sublime.set_timeout(
-            lambda: handle_threads(new_threads, preview, preview_output,
-                                   panel_output, has_changes),
-            100)
-    else:
-        message = 'AutoPep8: No issues to fixed.'
-        if has_changes:
-            message = 'AutoPep8: Issues fixed.'
-        sublime.status_message(message)
-        show_panel(panel_output, has_changes)
-
-        if preview and preview_output:
-            new_view('utf-8', preview_output)
-        sublime.set_timeout(lambda: sublime.status_message(''), 3000)

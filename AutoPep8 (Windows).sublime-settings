@@ -3,13 +3,13 @@
 
     // list codes for fixes; used by --ignore and --select
     "list-fixes": "",
-    
+
     // do not fix these errors / warnings(e.g. E4, W)
     "ignore": "E24, E226",
-    
+
     // select errors / warnings(e.g. E4, W)
     "select": "",
-    
+
     // enable possibly unsafe changes (E711, E712) 
     "aggressive": 0,
 
@@ -17,7 +17,6 @@
     "show_output_panel": true,
     // show panel with message: no issues to fixed
     "show_empty_panel": false,
-    "max-threads": 5,
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
     // value is base filename of the .tmLanguage syntax files
@@ -28,7 +27,7 @@
     // "never":  menu never appears
     // "ifneed": menu appears only if path or childs contain *.py file
     "file_menu_behaviour": "ifneed",
-    "file_menu_search_depth": 3,  // max search depth, uses for 'ifneed' mode
+    "file_menu_search_depth": 3, // max search depth, uses for 'ifneed' mode
 
     "avoid_new_line_in_select_mode": false
 }

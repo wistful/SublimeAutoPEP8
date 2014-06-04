@@ -1,9 +1,6 @@
 # coding=utf-8
-from collections import namedtuple
 import glob
 import os
-import re
-import sys
 
 import sublime
 import sublime_plugin
@@ -55,40 +52,18 @@ def pep8_params():
 class AutoPep8Command(sublime_plugin.TextCommand):
 
     def sel(self):
-        sels = self.view.sel()
-        if len(sels) == 1 and sels[0].a == sels[0].b:
-            sels = [namedtuple('sel', ['a', 'b'])(0, self.view.size())]
-
-        for sel in sels:
-            region = sublime.Region(sel.a, sel.b)
-            yield region, self.view.substr(region)
+        region = self.view.sel()[0]
+        if region.a == region.b:
+            region = sublime.Region(0, self.view.size())
+        return region, self.view.substr(region)
 
     def run(self, edit, preview=True):
-        max_threads = Settings('max-threads', 5)
-        threads = []
         queue = common.Queue()
-        stdoutput = common.StringIO()
+        region, source = self.sel()
 
-        for region, substr in self.sel():
-            args = {
-                'pep8_params': pep8_params(), 'view': self.view,
-                'filename': self.view.file_name(),
-                'source': substr,
-                'preview': preview,
-                'stdoutput': stdoutput,
-                'edit': edit, 'region': region
-            }
-            queue.put(args)
-            if len(threads) < max_threads:
-                th = common.AutoPep8Thread(queue)
-                th.start()
-                threads.append(th)
-
-        for _ in range(len(threads)):
-            queue.put(None)
-        if len(threads) > 0:
-            sublime.set_timeout(
-                lambda: common.handle_threads(threads, preview), 100)
+        queue.put((source, self.view.file_name(), self.view, region))
+        common.set_timeout(
+            lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
@@ -127,31 +102,15 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def run(self, paths=None, preview=True):
         if not paths:
             return
-        max_threads = Settings('max-threads', 5)
-        threads = []
         queue = common.Queue()
 
         for path in self.files(paths):
-            stdoutput = common.StringIO()
-            in_data = open(path, 'r').read()
+            with open(path, 'r') as fd:
+                source = fd.read()
+            queue.put((source, path, None, None))
 
-            args = {
-                'pep8_params': pep8_params(), 'filename': path,
-                'source': in_data, 'preview': preview,
-                'stdoutput': stdoutput
-            }
-
-            queue.put(args)
-            if len(threads) < max_threads:
-                th = common.AutoPep8Thread(queue)
-                th.start()
-                threads.append(th)
-
-        for _ in range(len(threads)):
-            queue.put(None)
-        if len(threads) > 0:
-            sublime.set_timeout(
-                lambda: common.handle_threads(threads, preview), 100)
+        common.set_timeout(
+            lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def files(self, paths):
         for path in paths:
