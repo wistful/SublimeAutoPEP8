@@ -96,6 +96,7 @@ def show_result(result):
 
 
 def worker(queue, preview, pep8_params, result=None):
+    sublime.status_message('AutoPEP8: formatting ...')
     if queue.empty():
         return show_result(result)
 
