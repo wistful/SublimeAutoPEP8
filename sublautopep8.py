@@ -1,9 +1,6 @@
 # coding=utf-8
-from collections import namedtuple
 import glob
 import os
-import re
-import sys
 
 import sublime
 import sublime_plugin
@@ -108,7 +105,6 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
         queue = common.Queue()
 
         for path in self.files(paths):
-            stdoutput = common.StringIO()
             with open(path, 'r') as fd:
                 source = fd.read()
             queue.put((source, path, None, None))
