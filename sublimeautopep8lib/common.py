@@ -52,12 +52,12 @@ def custom_stderr(stderr=None):
         sys.stderr = _stderr
 
 
-def create_diff(source1, source2, filename):
+def create_diff(source1, source2, filepath):
     result = difflib.unified_diff(
         StringIO(source1).readlines(),
         StringIO(source2).readlines(),
-        'original:' + filename,
-        'fixed:' + filename)
+        'original:' + filepath,
+        'fixed:' + filepath)
 
     # fix issue with join two last lines
     lines = [item for item in result]
@@ -86,7 +86,7 @@ def show_result(result):
         if 'diff' in command_result:
             diffs.append(command_result['diff'])
         not_fixed += command_result['not_fixed']
-        has_changes = was_changes or command_result.get('has_changes')
+        has_changes = has_changes or command_result.get('has_changes')
 
     message = 'AutoPep8: No issues to fix.'
     if has_changes:
