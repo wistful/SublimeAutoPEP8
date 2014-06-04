@@ -51,6 +51,13 @@ def custom_stderr(stderr=None):
         sys.stderr = _stderr
 
 
+def set_timeout(func, delay):
+    if sublime.version() < '3000':
+        return sublime.set_timeout(func, delay)
+    else:
+        return sublime.set_timeout_async(func, delay)
+
+
 def create_diff(source1, source2, filepath):
     result = difflib.unified_diff(
         StringIO(source1).readlines(),
@@ -91,7 +98,8 @@ def show_result(result):
 
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
-    sublime.set_timeout(lambda: sublime.status_message(''), 3000)
+    # TODO: move delay value to config
+    set_timeout(lambda: sublime.status_message(''), 3000)
 
 
 def worker(queue, preview, pep8_params, result=None):
@@ -122,7 +130,9 @@ def worker(queue, preview, pep8_params, result=None):
             command_result['diff'] = formatted
 
     result.append(command_result)
-    return worker(queue, preview, pep8_params, result)
+
+    set_timeout(
+        lambda: worker(queue, preview, pep8_params, result), 0)
 
 
 def save_state(view):

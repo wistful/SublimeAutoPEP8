@@ -62,7 +62,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
         region, source = self.sel()
 
         queue.put((source, self.view.file_name(), self.view, region))
-        sublime.set_timeout(
+        common.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def is_visible(self, *args):
@@ -109,7 +109,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
                 source = fd.read()
             queue.put((source, path, None, None))
 
-        sublime.set_timeout(
+        common.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def files(self, paths):
