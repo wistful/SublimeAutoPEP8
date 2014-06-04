@@ -63,7 +63,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
     def run(self, edit, preview=True):
         queue = common.Queue()
         region, source = self.sel()
-        
+
         queue.put((source, self.view.file_name(), self.view, region))
         sublime.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()), 100)
@@ -105,31 +105,16 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def run(self, paths=None, preview=True):
         if not paths:
             return
-        max_threads = Settings('max-threads', 5)
-        threads = []
         queue = common.Queue()
 
         for path in self.files(paths):
             stdoutput = common.StringIO()
-            in_data = open(path, 'r').read()
+            with open(path, 'r') as fd:
+                source = fd.read()
+            queue.put((source, path, None, None))
 
-            args = {
-                'pep8_params': pep8_params(), 'filename': path,
-                'source': in_data, 'preview': preview,
-                'stdoutput': stdoutput
-            }
-
-            queue.put(args)
-            if len(threads) < max_threads:
-                th = common.AutoPep8Thread(queue)
-                th.start()
-                threads.append(th)
-
-        for _ in range(len(threads)):
-            queue.put(None)
-        if len(threads) > 0:
-            sublime.set_timeout(
-                lambda: common.handle_threads(threads, preview), 100)
+        sublime.set_timeout(
+            lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def files(self, paths):
         for path in paths:

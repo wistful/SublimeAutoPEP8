@@ -103,7 +103,6 @@ def worker(queue, preview, pep8_params, result=None):
     result = result or []
     command_result = {}
     source, filepath, view, region = queue.get()
-
     with custom_stderr() as stdoutput:
         formatted = autopep8.fix_code(source, pep8_params)
         if preview:
@@ -118,7 +117,8 @@ def worker(queue, preview, pep8_params, result=None):
             if view:
                 replace_text(view, region, formatted)
             else:
-                open(filepath, 'w').write(formatted)
+                with open(filepath, 'w') as fd:
+                    fd.write(formatted)
         else:
             command_result['diff'] = formatted
 
