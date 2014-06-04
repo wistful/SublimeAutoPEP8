@@ -74,10 +74,6 @@ def replace_text(view, region, text):
     restore_state(view, state)
 
 
-def update_status():
-    pass
-
-
 def show_result(result):
     diffs = []
     not_fixed = ""
