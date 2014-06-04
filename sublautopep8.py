@@ -62,25 +62,11 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def run(self, edit, preview=True):
         queue = common.Queue()
-        stdoutput = common.StringIO()
-
-        region, substr = self.sel()
-        args = {
-            'pep8_params': pep8_params(), 'view': self.view,
-            'filename': self.view.file_name(),
-            'source': substr,
-            'preview': preview,
-            'stdoutput': stdoutput,
-            'edit': edit, 'region': region
-        }
-        queue.put(args) 
-        queue.put(None)
-
-        th = common.AutoPep8Thread(queue)
-        th.start()
-
+        region, source = self.sel()
+        
+        queue.put((source, self.view.file_name(), self.view, region))
         sublime.set_timeout(
-            lambda: common.handle_threads([th], preview), 100)
+            lambda: common.worker(queue, preview, pep8_params()), 100)
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
