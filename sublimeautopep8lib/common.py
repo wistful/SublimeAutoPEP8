@@ -29,6 +29,8 @@ else:
 DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
 DEFAULT_SEARCH_DEPTH = 3
 PYCODING = re.compile("coding[:=]\s*([-\w.]+)")
+VIEW_SKIP_FORMAT = 'autopep8_view_skip_format'
+VIEW_AUTOSAVE = 'autopep8_view_autosave'
 
 if sublime.platform() == 'windows':
     USER_CONFIG_NAME = 'AutoPep8 (Windows).sublime-settings'
@@ -123,6 +125,9 @@ def worker(queue, preview, pep8_params, result=None):
             command_result['has_changes'] = True
             if view:
                 replace_text(view, region, formatted)
+                if view.settings().get(VIEW_AUTOSAVE, False):
+                    view.settings().set(VIEW_SKIP_FORMAT, True)
+                    view.run_command("save", {'skip': 'YES'})
             else:
                 with open(filepath, 'w') as fd:
                     fd.write(formatted)

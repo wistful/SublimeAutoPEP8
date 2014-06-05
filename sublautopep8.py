@@ -160,15 +160,16 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save_async(self, view):
-        if not Settings('format_on_save', False):
+        skip_format = view.settings().get(common.VIEW_SKIP_FORMAT, False)
+        if not Settings('format_on_save', False) or skip_format:
+            view.settings().erase(common.VIEW_SKIP_FORMAT)
+            view.settings().erase(common.VIEW_AUTOSAVE)
             return
         view_syntax = view.settings().get('syntax')
         syntax_list = Settings('syntax_list', ["Python"])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
+            view.settings().set(common.VIEW_AUTOSAVE, True)
             view.run_command("auto_pep8", {"preview": False})
 
     def on_pre_save(self, view):
-        if not Settings('format_on_save', False):
-            return
-        if sublime.version() < '3000':
-            self.on_pre_save_async(view)
+        return self.on_pre_save_async(view)
