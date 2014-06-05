@@ -112,16 +112,20 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
         common.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()), 100)
 
+    def py_files_from_dir(path):
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                if filename.endswith('.py'):
+                    yield os.path.join(dirpath, filename)
+
     def files(self, paths):
         for path in paths:
             if os.path.isfile(path) and path.endswith('.py'):
                 yield path
                 continue
             if os.path.isdir(path):
-                for dirpath, dirnames, filenames in os.walk(path):
-                    for filename in filenames:
-                        if filename.endswith('.py'):
-                            yield os.path.join(dirpath, filename)
+                for file_path in self.py_files_from_dir(path):
+                    yield file_path
 
     def has_pyfiles(self, path, depth):
         for step in range(depth):
