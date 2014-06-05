@@ -15,8 +15,6 @@
 
     "format_on_save": false,
     "show_output_panel": true,
-    // show panel with message: no issues to fixed
-    "show_empty_panel": false,
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
     // value is base filename of the .tmLanguage syntax files

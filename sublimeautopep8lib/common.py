@@ -176,15 +176,7 @@ def show_panel(text, has_change):
     if not settings.get('show_output_panel', False):
         return
 
-    if not text and not settings.get('show_empty_panel', False):
-        return
-
-    if text:
-        text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
-    elif has_change and not text:
-        text = "SublimeAutoPep8: all issues were fixed."
-    elif not has_change and not text:
-        text = "SublimeAutoPep8: no issue(s) to fix."
+    text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
 
     view = sublime.active_window().get_output_panel("autopep8")
     view.set_read_only(False)

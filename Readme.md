@@ -31,8 +31,6 @@ Once you install Package Control, restart ST2 and bring up the Command Palette (
             "max-line-length": 79,
             "format_on_save": false,
             "show_output_panel": true,
-            // show panel with message: no issues to fixed
-            "show_empty_panel": false,
             // show Format/Preview menu items only for views
             // with syntax from `syntax_list`
             // value is base filename of the .tmLanguage syntax files
