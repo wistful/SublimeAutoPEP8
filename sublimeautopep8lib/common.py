@@ -104,6 +104,17 @@ def show_result(result):
     set_timeout(lambda: sublime.status_message(''), 3000)
 
 
+def format_source(formatted, filepath, view, region):
+    if view:
+        replace_text(view, region, formatted)
+        if view.settings().get(VIEW_AUTOSAVE, False):
+            view.settings().set(VIEW_SKIP_FORMAT, True)
+            view.run_command("save")
+    else:
+        with open(filepath, 'w') as fd:
+            fd.write(formatted)
+
+
 def worker(queue, preview, pep8_params, result=None):
     sublime.status_message('AutoPEP8: formatting ...')
     if queue.empty():
@@ -123,14 +134,7 @@ def worker(queue, preview, pep8_params, result=None):
     if formatted and formatted != source:
         if not preview:
             command_result['has_changes'] = True
-            if view:
-                replace_text(view, region, formatted)
-                if view.settings().get(VIEW_AUTOSAVE, False):
-                    view.settings().set(VIEW_SKIP_FORMAT, True)
-                    view.run_command("save")
-            else:
-                with open(filepath, 'w') as fd:
-                    fd.write(formatted)
+            format_source(formatted, filepath, view, region)
         else:
             command_result['diff'] = formatted
 
