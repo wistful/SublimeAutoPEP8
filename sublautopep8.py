@@ -63,7 +63,8 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
         queue.put((source, self.view.file_name(), self.view, region))
         common.set_timeout(
-            lambda: common.worker(queue, preview, pep8_params()), 100)
+            lambda: common.worker(queue, preview, pep8_params()),
+            common.WORKER_START_TIMEOUT)
 
     def is_visible(self, *args):
         view_syntax = self.view.settings().get('syntax')
@@ -110,9 +111,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             queue.put((source, path, None, None))
 
         common.set_timeout(
-            lambda: common.worker(queue, preview, pep8_params()), 100)
+            lambda: common.worker(queue, preview, pep8_params()),
+            common.WORKER_START_TIMEOUT)
 
-    def py_files_from_dir(path):
+    def py_files_from_dir(self, path):
         for dirpath, dirnames, filenames in os.walk(path):
             for filename in filenames:
                 if filename.endswith('.py'):

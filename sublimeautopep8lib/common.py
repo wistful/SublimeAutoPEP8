@@ -32,6 +32,10 @@ PYCODING = re.compile("coding[:=]\s*([-\w.]+)")
 VIEW_SKIP_FORMAT = 'autopep8_view_skip_format'
 VIEW_AUTOSAVE = 'autopep8_view_autosave'
 
+WORKER_TIMEOUT = 50 if sublime.version() < '3000' else 0
+WORKER_START_TIMEOUT = 100
+STATUS_MESSAGE_TIMEOUT = 3000
+
 if sublime.platform() == 'windows':
     USER_CONFIG_NAME = 'AutoPep8 (Windows).sublime-settings'
 else:
@@ -96,12 +100,13 @@ def show_result(result):
     if has_changes:
         message = 'AutoPep8: Issues were fixed.'
     sublime.status_message(message)
-    show_error_panel(not_fixed, has_changes)
+
+    show_error_panel(not_fixed)
 
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
-    # TODO: move delay value to config
-    set_timeout(lambda: sublime.status_message(''), 3000)
+
+    set_timeout(lambda: sublime.status_message(''), STATUS_MESSAGE_TIMEOUT)
 
 
 def format_source(formatted, filepath, view, region):
@@ -141,7 +146,7 @@ def worker(queue, preview, pep8_params, result=None):
     result.append(command_result)
 
     set_timeout(
-        lambda: worker(queue, preview, pep8_params, result), 0)
+        lambda: worker(queue, preview, pep8_params, result), WORKER_TIMEOUT)
 
 
 def save_state(view):
@@ -174,10 +179,10 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
-def show_error_panel(text, has_change):
+def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
 
-    if not settings.get('show_output_panel', False):
+    if not (text and settings.get('show_output_panel', False)):
         return
 
     text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
