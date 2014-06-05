@@ -32,6 +32,10 @@ PYCODING = re.compile("coding[:=]\s*([-\w.]+)")
 VIEW_SKIP_FORMAT = 'autopep8_view_skip_format'
 VIEW_AUTOSAVE = 'autopep8_view_autosave'
 
+WORKER_TIMEOUT = 50 if sublime.version() < '3000' else 0
+WORKER_START_TIMEOUT = 100
+STATUS_MESSAGE_TIMEOUT = 3000
+
 if sublime.platform() == 'windows':
     USER_CONFIG_NAME = 'AutoPep8 (Windows).sublime-settings'
 else:
@@ -96,12 +100,24 @@ def show_result(result):
     if has_changes:
         message = 'AutoPep8: Issues were fixed.'
     sublime.status_message(message)
-    show_panel(not_fixed, has_changes)
+
+    show_error_panel(not_fixed)
 
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
-    # TODO: move delay value to config
-    set_timeout(lambda: sublime.status_message(''), 3000)
+
+    set_timeout(lambda: sublime.status_message(''), STATUS_MESSAGE_TIMEOUT)
+
+
+def format_source(formatted, filepath, view, region):
+    if view:
+        replace_text(view, region, formatted)
+        if view.settings().get(VIEW_AUTOSAVE, False):
+            view.settings().set(VIEW_SKIP_FORMAT, True)
+            view.run_command("save")
+    else:
+        with open(filepath, 'w') as fd:
+            fd.write(formatted)
 
 
 def worker(queue, preview, pep8_params, result=None):
@@ -123,21 +139,14 @@ def worker(queue, preview, pep8_params, result=None):
     if formatted and formatted != source:
         if not preview:
             command_result['has_changes'] = True
-            if view:
-                replace_text(view, region, formatted)
-                if view.settings().get(VIEW_AUTOSAVE, False):
-                    view.settings().set(VIEW_SKIP_FORMAT, True)
-                    view.run_command("save", {'skip': 'YES'})
-            else:
-                with open(filepath, 'w') as fd:
-                    fd.write(formatted)
+            format_source(formatted, filepath, view, region)
         else:
             command_result['diff'] = formatted
 
     result.append(command_result)
 
     set_timeout(
-        lambda: worker(queue, preview, pep8_params, result), 0)
+        lambda: worker(queue, preview, pep8_params, result), WORKER_TIMEOUT)
 
 
 def save_state(view):
@@ -170,21 +179,19 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
-def show_panel(text, has_change):
+def hide_error_panel():
+    sublime.active_window().run_command(
+        "hide_panel", {"panel": "output.autopep8"})
+
+
+def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
 
-    if not settings.get('show_output_panel', False):
+    if not (text and settings.get('show_output_panel', False)):
+        hide_error_panel()
         return
 
-    if not text and not settings.get('show_empty_panel', False):
-        return
-
-    if text:
-        text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
-    elif has_change and not text:
-        text = "SublimeAutoPep8: all issues were fixed."
-    elif not has_change and not text:
-        text = "SublimeAutoPep8: no issue(s) to fix."
+    text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
 
     view = sublime.active_window().get_output_panel("autopep8")
     view.set_read_only(False)
@@ -199,8 +206,6 @@ def find_not_fixed(text, filepath):
     last_to_fix = text.rfind("issue(s) to fix")
     if last_to_fix > 0:
         for code, line in PATTERN.findall(text[last_to_fix:]):
-            message = 'File "{0}", line {1}: not fixing {2}\n'.format(filepath,
-                                                                      line,
-                                                                      code)
-            result += message
+            message = 'File "{0}", line {1}: not fixing {2}\n'
+            result += message.format(filepath, line, code)
     return result
