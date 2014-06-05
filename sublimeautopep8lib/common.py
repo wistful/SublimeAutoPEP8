@@ -195,8 +195,6 @@ def find_not_fixed(text, filepath):
     last_to_fix = text.rfind("issue(s) to fix")
     if last_to_fix > 0:
         for code, line in PATTERN.findall(text[last_to_fix:]):
-            message = 'File "{0}", line {1}: not fixing {2}\n'.format(filepath,
-                                                                      line,
-                                                                      code)
-            result += message
+            message = 'File "{0}", line {1}: not fixing {2}\n'
+            result += message.format(filepath, line, code)
     return result
