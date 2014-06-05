@@ -179,10 +179,16 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
+def hide_error_panel():
+    sublime.active_window().run_command(
+        "hide_panel", {"panel": "output.autopep8"})
+
+
 def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
 
     if not (text and settings.get('show_output_panel', False)):
+        hide_error_panel()
         return
 
     text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
