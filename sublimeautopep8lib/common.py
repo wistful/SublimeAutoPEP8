@@ -127,7 +127,7 @@ def worker(queue, preview, pep8_params, result=None):
                 replace_text(view, region, formatted)
                 if view.settings().get(VIEW_AUTOSAVE, False):
                     view.settings().set(VIEW_SKIP_FORMAT, True)
-                    view.run_command("save", {'skip': 'YES'})
+                    view.run_command("save")
             else:
                 with open(filepath, 'w') as fd:
                     fd.write(formatted)
