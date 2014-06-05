@@ -96,7 +96,7 @@ def show_result(result):
     if has_changes:
         message = 'AutoPep8: Issues were fixed.'
     sublime.status_message(message)
-    show_panel(not_fixed, has_changes)
+    show_error_panel(not_fixed, has_changes)
 
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
@@ -170,7 +170,7 @@ def new_view(encoding, text):
     view.set_scratch(True)
 
 
-def show_panel(text, has_change):
+def show_error_panel(text, has_change):
     settings = sublime.load_settings(USER_CONFIG_NAME)
 
     if not settings.get('show_output_panel', False):
