@@ -14,6 +14,7 @@ else:
 
 
 def _next(iter_obj):
+    """Retrieve the next item from the iter_obj."""
     try:
         return iter_obj.next()
     except AttributeError:
@@ -21,6 +22,7 @@ def _next(iter_obj):
 
 
 def Settings(name, default):
+    """Return value by name from user settings."""
     view = sublime.active_window().active_view()
     project_config = view.settings().get('sublimeautopep8', {})
     global_config = sublime.load_settings(common.USER_CONFIG_NAME)
@@ -28,6 +30,7 @@ def Settings(name, default):
 
 
 def pep8_params():
+    """Return params for the autopep8 module."""
     params = ['-d']  # args for preview
 
     # read settings
@@ -53,6 +56,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def sel(self):
         region = self.view.sel()[0]
+        # select all view if there is no selected region.
         if region.a == region.b:
             region = sublime.Region(0, self.view.size())
         return region, self.view.substr(region)

@@ -90,12 +90,15 @@ def show_result(result):
     diffs = []
     not_fixed = ""
     has_changes = False
+
+    # merge diffs.
     for command_result in result:
         if 'diff' in command_result:
             diffs.append(command_result['diff'])
         not_fixed += command_result['not_fixed']
         has_changes = has_changes or command_result.get('has_changes')
 
+    # show status message.
     message = 'AutoPep8: No issues to fix.'
     if has_changes:
         message = 'AutoPep8: Issues were fixed.'
@@ -103,6 +106,7 @@ def show_result(result):
 
     show_error_panel(not_fixed)
 
+    # show diff.
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
 
@@ -113,6 +117,7 @@ def format_source(formatted, filepath, view, region):
     if view:
         replace_text(view, region, formatted)
         if view.settings().get(VIEW_AUTOSAVE, False):
+            # prevent double formatting.
             view.settings().set(VIEW_SKIP_FORMAT, True)
             view.run_command("save")
     else:
@@ -206,6 +211,6 @@ def find_not_fixed(text, filepath):
     last_to_fix = text.rfind("issue(s) to fix")
     if last_to_fix > 0:
         for code, line in PATTERN.findall(text[last_to_fix:]):
-            message = 'File "{0}", line {1}: not fixing {2}\n'
+            message = 'File "{0}", line {1}: not fixed {2}\n'
             result += message.format(filepath, line, code)
     return result
