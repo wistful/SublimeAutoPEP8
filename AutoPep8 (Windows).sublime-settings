@@ -13,6 +13,9 @@
     // enable possibly unsafe changes (E711, E712) 
     "aggressive": 0,
 
+    // number of spaces per indent level
+    "indent-size": 4,
+
     "format_on_save": false,
     "show_output_panel": true,
     // Format/Preview menu items only appear for views

@@ -34,7 +34,7 @@ def pep8_params():
     params = ['-d']  # args for preview
 
     # read settings
-    for opt in ("ignore", "select", "max-line-length"):
+    for opt in ("ignore", "select", "max-line-length", "indent-size"):
         params.append("--{0}={1}".format(opt, Settings(opt, "")))
 
     if Settings("list-fixes", None):
