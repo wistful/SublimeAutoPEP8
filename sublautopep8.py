@@ -49,7 +49,7 @@ def pep8_params():
 
     # autopep8.parse_args requirea at least one positional argument
     params.append('fake-file')
-    return autopep8.parse_args(params)[0]
+    return autopep8.parse_args(params)
 
 
 class AutoPep8Command(sublime_plugin.TextCommand):
