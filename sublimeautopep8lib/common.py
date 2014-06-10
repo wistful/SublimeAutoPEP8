@@ -191,19 +191,20 @@ def hide_error_panel():
 
 def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
-
+    has_errors = False
     if not (text and settings.get('show_output_panel', False)):
-        hide_error_panel()
-        return
-
-    text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
+        text = "SublimeAutoPep8: There is no errors."
+    else:
+        text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
+        has_errors = True
 
     view = sublime.active_window().get_output_panel("autopep8")
     view.set_read_only(False)
     view.run_command("auto_pep8_output", {"text": text})
     view.set_read_only(True)
-    sublime.active_window().run_command(
-        "show_panel", {"panel": "output.autopep8"})
+    if has_errors:
+        sublime.active_window().run_command(
+            "show_panel", {"panel": "output.autopep8"})
 
 
 def find_not_fixed(text, filepath):
