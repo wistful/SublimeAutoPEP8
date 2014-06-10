@@ -1,3 +1,11 @@
+AutoPEP8 1.1 (2014/06/10):
+    - options "max-threads" and "show_empty_panel" were removed;
+    + added new option "indent-size" to specify number of spaces per indent level;
+    * option 'show_panel' was renamed to 'show_error_panel';
+    * autopep8 -> 1.0.2;
+    * pep8 -> 1.5.7;
+    * fixed issue with autosave mode;
+
 AutoPEP8 1.0.6 (2013/12/24):
     + added option 'avoid_new_line_in_select_mode' to remove last empty line in select mode
 
