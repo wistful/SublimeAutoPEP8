@@ -1,5 +1,3 @@
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/wistful/sublimeautopep8/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
-
 ### Sublime Auto PEP8 Formatting
 
 ## About
@@ -8,23 +6,18 @@ Supported ST2 and ST3
 
 ## Features
 + format / preview code according PEP8
-+ format / preview multi-selected text
++ format / preview selected text
 + format / preview all python modules in folder
 + side bar menu
 + formated code while saving
 
 ## Installing
-**With the Package Control plugin**: The easiest way to install AutoPEP8 in through Package Control, which can be found at this site: [http://wbond.net/sublime_packages/package_control](http://wbond.net/sublime_packages/package_control)
+The easiest way to install AutoPEP8 in through Package Control, which can be found at this site: [http://wbond.net/sublime_packages/package_control](http://wbond.net/sublime_packages/package_control)
 
-Once you install Package Control, restart ST2 and bring up the Command Palette (`Command+Shift+P` on OS X, `Control+Shift+P` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select AutoPEP8 when the list appears.
-
-**With Git:** Clone the repository in your Sublime Text "Packages" directory:
-`git clone git@github.com:wistful/SublimeAutoPEP8.git AutoPEP8`
-
-**Without Git:** Download the latest source from [GitHub](https://github.com/wistful/SublimeAutoPEP8) and copy to your Sublime Text "Packages" directory as **AutoPEP8**.
+Once you install Package Control, restart ST2/ST3 and bring up the Command Palette (`Command+Shift+P` on OS X, `Control+Shift+P` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select AutoPEP8 when the list appears.
 
 ## Per-project settings
-```json
+```javascript
 {
     "settings": {
         "sublimeautopep8": {
