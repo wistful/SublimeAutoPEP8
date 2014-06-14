@@ -1,6 +1,6 @@
 {
     "install": "messages/install.txt",
-    "1.1": "messages/changelog",
+    "1.1.0": "messages/changelog",
     "1.0.6": "messages/changelog",
     "1.0.5": "messages/changelog",
     "1.0.4": "messages/changelog",
