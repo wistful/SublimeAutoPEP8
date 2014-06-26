@@ -3148,7 +3148,7 @@ def create_parser():
     # Do import locally to be friendly to those who use autopep8 as a library
     # and are supporting Python 2.6.
     try:
-        from sublimeautopep8lib import argparse
+        import argparse
     except ImportError:
         from AutoPEP8.sublimeautopep8lib import argparse
 
