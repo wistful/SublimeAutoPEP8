@@ -1,3 +1,7 @@
+AutoPEP8 1.1.1 (2014/07/01):
+    * fixed issue(#28): ignore selected block during autosave process.
+    * autopep8 1.0.2 -> 1.0.3
+
 AutoPEP8 1.1.1 (2014/06/25):
     * fixed issue(#27): plugin doesn't work properly in ST2.
 
