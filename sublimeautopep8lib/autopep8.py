@@ -69,12 +69,17 @@ except ImportError:
     from AutoPEP8.sublimeautopep8lib import pep8
 
 try:
+    from sublimeautopep8lib import argparse
+except ImportError:
+    from AutoPEP8.sublimeautopep8lib import argparse
+
+try:
     unicode
 except NameError:
     unicode = str
 
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 CR = '\r'
@@ -417,6 +422,8 @@ class FixPEP8(object):
 
         # Many fixers are the same even though pep8 categorizes them
         # differently.
+        self.fix_e115 = self.fix_e112
+        self.fix_e116 = self.fix_e113
         self.fix_e121 = self._fix_reindent
         self.fix_e122 = self._fix_reindent
         self.fix_e123 = self._fix_reindent
@@ -2377,6 +2384,8 @@ def normalize_multiline(line):
         return line + 'def _(): pass'
     elif line.startswith('class '):
         return line + ' pass'
+    elif line.startswith('if '):
+        return line + ' pass'
     else:
         return line
 
@@ -2824,7 +2833,7 @@ def fix_code(source, options=None):
         options = parse_args([''])
 
     if not isinstance(source, unicode):
-        source = source.decode(locale.getpreferredencoding(False))
+        source = source.decode(locale.getpreferredencoding())
 
     sio = io.StringIO(source)
     return fix_lines(sio.readlines(), options=options)
@@ -3145,13 +3154,6 @@ def extract_code_from_function(function):
 
 def create_parser():
     """Return command-line parser."""
-    # Do import locally to be friendly to those who use autopep8 as a library
-    # and are supporting Python 2.6.
-    try:
-        import argparse
-    except ImportError:
-        from AutoPEP8.sublimeautopep8lib import argparse
-
     parser = argparse.ArgumentParser(description=docstring_summary(__doc__),
                                      prog='autopep8')
     parser.add_argument('--version', action='version',
