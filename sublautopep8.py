@@ -54,16 +54,16 @@ def pep8_params():
 
 class AutoPep8Command(sublime_plugin.TextCommand):
 
-    def sel(self):
+    def sel(self, skip_selected):
         region = self.view.sel()[0]
         # select all view if there is no selected region.
-        if region.a == region.b:
+        if region.a == region.b or skip_selected:
             region = sublime.Region(0, self.view.size())
         return region, self.view.substr(region)
 
-    def run(self, edit, preview=True):
+    def run(self, edit, preview=True, skip_selected=False):
         queue = common.Queue()
-        region, source = self.sel()
+        region, source = self.sel(skip_selected)
 
         queue.put((source, self.view.file_name(), self.view, region))
         common.set_timeout(
@@ -179,7 +179,8 @@ class AutoPep8Listener(sublime_plugin.EventListener):
         syntax_list = Settings('syntax_list', ["Python"])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
             view.settings().set(common.VIEW_AUTOSAVE, True)
-            view.run_command("auto_pep8", {"preview": False})
+            view.run_command("auto_pep8",
+                             {"preview": False, "skip_selected": True})
 
     def on_pre_save(self, view):
         return self.on_pre_save_async(view)
