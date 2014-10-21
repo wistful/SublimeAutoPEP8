@@ -79,7 +79,7 @@ except NameError:
     unicode = str
 
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 
 CR = '\r'
@@ -107,6 +107,7 @@ DEFAULT_INDENT_SIZE = 4
 
 # W602 is handled separately due to the need to avoid "with_traceback".
 CODE_TO_2TO3 = {
+    'E231': ['ws_comma'],
     'E721': ['idioms'],
     'W601': ['has_key'],
     'W603': ['ne'],
@@ -160,6 +161,7 @@ def readlines_from_file(filename):
 
 def extended_blank_lines(logical_line,
                          blank_lines,
+                         blank_before,
                          indent_level,
                          previous_logical):
     """Check for missing blank lines after class declaration."""
@@ -168,7 +170,7 @@ def extended_blank_lines(logical_line,
             logical_line.startswith(('def ', 'class ', '@')) or
             pep8.DOCSTRING_REGEX.match(logical_line)
         ):
-            if indent_level and not blank_lines:
+            if indent_level and not blank_lines and not blank_before:
                 yield (0, 'E309 expected 1 blank line after class declaration')
     elif previous_logical.startswith('def '):
         if blank_lines and pep8.DOCSTRING_REGEX.match(logical_line):
@@ -178,6 +180,7 @@ def extended_blank_lines(logical_line,
         if (
             indent_level and
             not blank_lines and
+            not blank_before and
             logical_line.startswith(('def ')) and
             '(self' in logical_line
         ):
@@ -453,8 +456,7 @@ class FixPEP8(object):
             options and (options.aggressive >= 2 or options.experimental) else
             self.fix_long_line_physically)
         self.fix_e703 = self.fix_e702
-
-        self._ws_comma_done = False
+        self.fix_w293 = self.fix_w291
 
     def _fix_source(self, results):
         try:
@@ -653,17 +655,6 @@ class FixPEP8(object):
 
     def fix_e231(self, result):
         """Add missing whitespace."""
-        # Optimize for comma case. This will fix all commas in the full source
-        # code in one pass. Don't do this more than once. If it fails the first
-        # time, there is no point in trying again.
-        if ',' in result['info'] and not self._ws_comma_done:
-            self._ws_comma_done = True
-            original = ''.join(self.source)
-            new = refactor(original, ['ws_comma'])
-            if original.strip() != new.strip():
-                self.source = [new]
-                return range(1, 1 + len(original))
-
         line_index = result['line'] - 1
         target = self.source[line_index]
         offset = result['column']
@@ -1026,10 +1017,7 @@ def get_fixed_long_line(target, previous_line, original,
 
     if verbose >= 4:
         print(('-' * 79 + '\n').join([''] + candidates + ['']),
-              file=codecs.getwriter('utf-8')(sys.stderr.buffer
-                                             if hasattr(sys.stderr,
-                                                        'buffer')
-                                             else sys.stderr))
+              file=wrap_output(sys.stderr, 'utf-8'))
 
     if candidates:
         return candidates[0]
@@ -1198,7 +1186,7 @@ def fix_e265(source, aggressive=False):  # pylint: disable=unused-argument
     return ''.join(fixed_lines)
 
 
-def refactor(source, fixer_names, ignore=None):
+def refactor(source, fixer_names, ignore=None, filename=''):
     """Return refactored code using lib2to3.
 
     Skip if ignore string is produced in the refactored code.
@@ -1207,7 +1195,8 @@ def refactor(source, fixer_names, ignore=None):
     from lib2to3 import pgen2
     try:
         new_text = refactor_with_2to3(source,
-                                      fixer_names=fixer_names)
+                                      fixer_names=fixer_names,
+                                      filename=filename)
     except (pgen2.parse.ParseError,
             SyntaxError,
             UnicodeDecodeError,
@@ -1229,7 +1218,8 @@ def code_to_2to3(select, ignore):
     return fixes
 
 
-def fix_2to3(source, aggressive=True, select=None, ignore=None):
+def fix_2to3(source,
+             aggressive=True, select=None, ignore=None, filename=''):
     """Fix various deprecated code (via lib2to3)."""
     if not aggressive:
         return source
@@ -1239,7 +1229,8 @@ def fix_2to3(source, aggressive=True, select=None, ignore=None):
 
     return refactor(source,
                     code_to_2to3(select=select,
-                                 ignore=ignore))
+                                 ignore=ignore),
+                    filename=filename)
 
 
 def fix_w602(source, aggressive=True):
@@ -2384,7 +2375,7 @@ def normalize_multiline(line):
         return line + 'def _(): pass'
     elif line.startswith('class '):
         return line + ' pass'
-    elif line.startswith('if '):
+    elif line.startswith(('if ', 'elif ', 'for ', 'while ')):
         return line + ' pass'
     else:
         return line
@@ -2624,7 +2615,7 @@ def _leading_space_count(line):
     return i
 
 
-def refactor_with_2to3(source_text, fixer_names):
+def refactor_with_2to3(source_text, fixer_names, filename=''):
     """Use lib2to3 to refactor the source.
 
     Return the refactored source code.
@@ -2636,7 +2627,8 @@ def refactor_with_2to3(source_text, fixer_names):
 
     from lib2to3.pgen2 import tokenize as lib2to3_tokenize
     try:
-        return unicode(tool.refactor_string(source_text, name=''))
+        # The name parameter is necessary particularly for the "import" fixer.
+        return unicode(tool.refactor_string(source_text, name=filename))
     except lib2to3_tokenize.TokenError:
         return source_text
 
@@ -2827,13 +2819,17 @@ def code_match(code, select, ignore):
     return True
 
 
-def fix_code(source, options=None):
-    """Return fixed source code."""
+def fix_code(source, options=None, encoding=None):
+    """Return fixed source code.
+
+    "encoding" will be used to decode "source" if it is a byte string.
+
+    """
     if not options:
         options = parse_args([''])
 
     if not isinstance(source, unicode):
-        source = source.decode(locale.getpreferredencoding())
+        source = source.decode(encoding or locale.getpreferredencoding())
 
     sio = io.StringIO(source)
     return fix_lines(sio.readlines(), options=options)
@@ -2853,7 +2849,9 @@ def fix_lines(source_lines, options, filename=''):
         fixed_source = apply_local_fixes(tmp_source, options)
     else:
         # Apply global fixes only once (for efficiency).
-        fixed_source = apply_global_fixes(tmp_source, options)
+        fixed_source = apply_global_fixes(tmp_source,
+                                          options,
+                                          filename=filename)
 
     passes = 0
     long_line_ignore_cache = set()
@@ -2890,11 +2888,7 @@ def fix_file(filename, options=None, output=None):
         encoding = detect_encoding(filename)
 
     if output:
-        output = codecs.getwriter(encoding)(output.buffer
-                                            if hasattr(output, 'buffer')
-                                            else output)
-
-        output = LineEndingWrapper(output)
+        output = LineEndingWrapper(wrap_output(output, encoding=encoding))
 
     fixed_source = fix_lines(fixed_source, options, filename=filename)
 
@@ -2933,14 +2927,15 @@ def global_fixes():
                 yield (code, function)
 
 
-def apply_global_fixes(source, options, where='global'):
+def apply_global_fixes(source, options, where='global', filename=''):
     """Run global fixes on source code.
 
     These are fixes that only need be done once (unlike those in
     FixPEP8, which are dependent on pep8).
 
     """
-    if code_match('E101', select=options.select, ignore=options.ignore):
+    if any(code_match(code, select=options.select, ignore=options.ignore)
+           for code in ['E101', 'E111']):
         source = reindent(source,
                           indent_size=options.indent_size)
 
@@ -2956,7 +2951,8 @@ def apply_global_fixes(source, options, where='global'):
     source = fix_2to3(source,
                       aggressive=options.aggressive,
                       select=options.select,
-                      ignore=options.ignore)
+                      ignore=options.ignore,
+                      filename=filename)
 
     return source
 
@@ -3090,8 +3086,8 @@ def apply_local_fixes(source, options):
         for t in itertools.takewhile(lambda t: t[1][1] >= ind,
                                      enumerate(logical[0][start_log:])):
             n_log, n = start_log + t[0], t[1][0]
-        # start shares indent up to n.
 
+        # Start shares indent up to n.
         if n <= end:
             source = local_fix(source, start_log, n_log,
                                start_lines, end_lines,
@@ -3110,7 +3106,7 @@ def apply_local_fixes(source, options):
 
             if (indents[after_end_log] == indents[start_log]
                     and is_continued_stmt(source[after_end])):
-                # find n, the beginning of the last continued statement
+                # Find n, the beginning of the last continued statement.
                 # Apply fix to previous block if there is one.
                 only_block = True
                 for n, n_ind in logical[0][start_log:end_log + 1][::-1]:
@@ -3251,19 +3247,19 @@ def parse_args(arguments):
         parser.error('--max-line-length must be greater than 0')
 
     if args.select:
-        args.select = args.select.split(',')
+        args.select = _split_comma_separated(args.select)
 
     if args.ignore:
-        args.ignore = args.ignore.split(',')
+        args.ignore = _split_comma_separated(args.ignore)
     elif not args.select:
         if args.aggressive:
             # Enable everything by default if aggressive.
             args.select = ['E', 'W']
         else:
-            args.ignore = DEFAULT_IGNORE.split(',')
+            args.ignore = _split_comma_separated(DEFAULT_IGNORE)
 
     if args.exclude:
-        args.exclude = args.exclude.split(',')
+        args.exclude = _split_comma_separated(args.exclude)
     else:
         args.exclude = []
 
@@ -3284,6 +3280,11 @@ def parse_args(arguments):
                          'to the second')
 
     return args
+
+
+def _split_comma_separated(string):
+    """Return a set of strings."""
+    return set(filter(None, string.split(',')))
 
 
 def decode_filename(filename):
@@ -3608,6 +3609,13 @@ def is_probably_part_of_multiline(line):
     )
 
 
+def wrap_output(output, encoding):
+    """Return output with specified encoding."""
+    return codecs.getwriter(encoding)(output.buffer
+                                      if hasattr(output, 'buffer')
+                                      else output)
+
+
 def main():
     """Tool main."""
     try:
@@ -3629,9 +3637,12 @@ def main():
         if args.files == ['-']:
             assert not args.in_place
 
+            encoding = sys.stdin.encoding or locale.getpreferredencoding()
+
             # LineEndingWrapper is unnecessary here due to the symmetry between
             # standard in and standard out.
-            sys.stdout.write(fix_code(sys.stdin.read(), args))
+            wrap_output(sys.stdout, encoding=encoding).write(
+                fix_code(sys.stdin.read(), args, encoding=encoding))
         else:
             if args.in_place or args.diff:
                 args.files = list(set(args.files))
