@@ -134,6 +134,7 @@ def worker(queue, preview, pep8_params, result=None):
     command_result = {}
     source, filepath, view, region = queue.get()
     with custom_stderr() as stdoutput:
+        # TODO(wistful): pass 'encoding' parameter to the 'fix_code' function.
         formatted = autopep8.fix_code(source, pep8_params)
         if preview:
             formatted = create_diff(source1=source, source2=formatted,
