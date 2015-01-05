@@ -1,6 +1,8 @@
 [
-    { "caption": "-", "id": "autopep8-start-separator"},
-    { "caption": "AutoPEP8", "id": "autopep8", "children":
+    { 
+    	"caption": "AutoPEP8", 
+    	"id": "autopep8",
+    	"children":
         [
 		    { "caption": "Format Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": false} },
 		    { "caption": "Preview Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": true} },
