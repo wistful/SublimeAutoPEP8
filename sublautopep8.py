@@ -24,7 +24,7 @@ def _next(iter_obj):
 def Settings(name, default):
     """Return value by name from user settings."""
     view = sublime.active_window().active_view()
-    project_config = view.settings().get('sublimeautopep8', {})
+    project_config = view.settings().get('sublimeautopep8', {}) if view else {}
     global_config = sublime.load_settings(common.USER_CONFIG_NAME)
     return project_config.get(name, global_config.get(name, default))
 
