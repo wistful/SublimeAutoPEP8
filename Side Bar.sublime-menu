@@ -5,7 +5,7 @@
     	"children":
         [
 		    { "caption": "Format Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": false} },
-		    { "caption": "Preview Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": true} },
+		    { "caption": "Preview Code", "command": "auto_pep8_file", "args": {"paths": [], "preview": true} }
 	    ]
 	}
 ]
