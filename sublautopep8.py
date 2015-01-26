@@ -12,6 +12,11 @@ else:
     from AutoPEP8.sublimeautopep8lib import autopep8
     from AutoPEP8.sublimeautopep8lib import common
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 
 def _next(iter_obj):
     """Retrieve the next item from the iter_obj."""
@@ -59,13 +64,16 @@ class AutoPep8Command(sublime_plugin.TextCommand):
         # select all view if there is no selected region.
         if region.a == region.b or skip_selected:
             region = sublime.Region(0, self.view.size())
-        return region, self.view.substr(region)
+
+        return region, self.view.substr(region), self.view.encoding()
 
     def run(self, edit, preview=True, skip_selected=False):
         queue = common.Queue()
-        region, source = self.sel(skip_selected)
+        region, source, encoding = self.sel(skip_selected)
+        if not isinstance(source, unicode) and hasattr('decode'):
+            source = source.decode(encoding)
 
-        queue.put((source, self.view.file_name(), self.view, region))
+        queue.put((source, self.view.file_name(), self.view, region, encoding))
         common.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()),
             common.WORKER_START_TIMEOUT)
@@ -112,7 +120,12 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
         for path in self.files(paths):
             with open(path, 'r') as fd:
                 source = fd.read()
-            queue.put((source, path, None, None))
+
+            encoding = common.get_pyencoding(source)
+            if not isinstance(source, unicode) and hasattr(source, 'decode'):
+                source = source.decode(encoding)
+
+            queue.put((source, path, None, None, encoding))
 
         common.set_timeout(
             lambda: common.worker(queue, preview, pep8_params()),
