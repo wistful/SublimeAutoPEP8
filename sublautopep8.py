@@ -78,11 +78,14 @@ class AutoPep8Command(sublime_plugin.TextCommand):
             lambda: common.worker(queue, preview, pep8_params()),
             common.WORKER_START_TIMEOUT)
 
-    def is_visible(self, *args):
+    def is_enabled(self, *args):
         view_syntax = self.view.settings().get('syntax')
         syntax_list = Settings('syntax_list', ["Python"])
         filename = os.path.basename(view_syntax)
         return os.path.splitext(filename)[0] in syntax_list
+
+    def is_visible(self, *args):
+        return True
 
 
 class AutoPep8OutputCommand(sublime_plugin.TextCommand):
@@ -168,16 +171,11 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
                 return True
         return False
 
+    def is_enabled(self, *args, **kwd):
+        return self.check_paths(kwd.get('paths'))
+
     def is_visible(self, *args, **kwd):
-        behaviour = Settings('file_menu_behaviour',
-                             common.DEFAULT_FILE_MENU_BEHAVIOUR)
-        if behaviour == 'always':
-            return True
-        elif behaviour == 'never':
-            return False
-        else:
-            # ifneed behaviour
-            return self.check_paths(kwd.get('paths'))
+        return True
 
 
 class AutoPep8Listener(sublime_plugin.EventListener):

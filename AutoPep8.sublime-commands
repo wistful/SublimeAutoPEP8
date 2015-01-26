@@ -1,11 +1,11 @@
 [
     {
-        "caption": "PEP8: Preview Changes",
+        "caption": "AutoPEP8: Preview Changes",
         "command": "auto_pep8",
         "args": {"preview": true}
     },
     {
-        "caption": "PEP8: Format Code",
+        "caption": "AutoPEP8: Format Code",
         "command": "auto_pep8",
         "args": {"preview": false}
     }
