@@ -1,7 +1,7 @@
 [
-    { 
-        "caption": "AutoPEP8", 
-        "id": "autopep8", 
+    {
+        "caption": "AutoPEP8",
+        "id": "autopep8",
         "children":
         [
             {
@@ -11,7 +11,7 @@
             },
             {
                 "command": "auto_pep8",
-                "args": {"paths": [], "preview": true},
+                "args": {"preview": true},
                 "caption": "Preview"
             }
         ]
