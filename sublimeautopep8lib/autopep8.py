@@ -79,7 +79,7 @@ except NameError:
     unicode = str
 
 
-__version__ = '1.0.4'
+__version__ = '1.1'
 
 
 CR = '\r'
@@ -115,7 +115,6 @@ CODE_TO_2TO3 = {
     'W690': ['apply',
              'except',
              'exitfunc',
-             'import',
              'numliterals',
              'operator',
              'paren',
@@ -126,6 +125,14 @@ CODE_TO_2TO3 = {
              'throw',
              'tuple_params',
              'xreadlines']}
+
+
+if sys.platform == 'win32':  # pragma: no cover
+    DEFAULT_CONFIG = os.path.expanduser(r'~\.pep8')
+else:
+    DEFAULT_CONFIG = os.path.join(os.getenv('XDG_CONFIG_HOME') or
+                                  os.path.expanduser('~/.config'), 'pep8')
+PROJECT_CONFIG = ('setup.cfg', 'tox.ini', '.pep8')
 
 
 def open_with_encoding(filename, encoding=None, mode='r'):
@@ -300,8 +307,11 @@ def continued_indentation(logical_line, tokens, indent_level, indent_char,
                 yield (start, '{0} {1}'.format(*error))
 
         # Look for visual indenting.
-        if (parens[row] and token_type not in (tokenize.NL, tokenize.COMMENT)
-                and not indent[depth]):
+        if (
+            parens[row] and
+            token_type not in (tokenize.NL, tokenize.COMMENT) and
+            not indent[depth]
+        ):
             indent[depth] = start[1]
             indent_chances[start[1]] = True
         # Deal with implicit string concatenation.
@@ -897,7 +907,15 @@ class FixPEP8(object):
         second = (_get_indentation(logical_lines[0]) +
                   target[offset:].lstrip(';').lstrip())
 
-        self.source[line_index] = first + '\n' + second
+        # find inline commnet
+        inline_comment = None
+        if '# ' == target[offset:].lstrip(';').lstrip()[:2]:
+            inline_comment = target[offset:].lstrip(';')
+
+        if inline_comment:
+            self.source[line_index] = first + inline_comment
+        else:
+            self.source[line_index] = first + '\n' + second
         return [line_index + 1]
 
     def fix_e711(self, result):
@@ -1171,11 +1189,13 @@ def fix_e265(source, aggressive=False):  # pylint: disable=unused-argument
 
             # Normalize beginning if not a shebang.
             if len(line) > 1:
+                pos = next((index for index, c in enumerate(line)
+                            if c != '#'))
                 if (
                     # Leave multiple spaces like '#    ' alone.
-                    (line.count('#') > 1 or line[1].isalnum())
+                    (line[:pos].count('#') > 1 or line[1].isalnum()) and
                     # Leave stylistic outlined blocks alone.
-                    and not line.rstrip().endswith('#')
+                    not line.rstrip().endswith('#')
                 ):
                     line = '# ' + line.lstrip('# \t')
 
@@ -1583,7 +1603,7 @@ class ReformattedLines(object):
                  (self._prev_prev_item.is_name or
                   self._prev_prev_item.is_number or
                   self._prev_prev_item.is_string)) and
-                prev_text in ('+', '-', '%', '*', '/', '//', '**')))))
+                prev_text in ('+', '-', '%', '*', '/', '//', '**', 'in')))))
         ):
             self._lines.append(self._Space())
 
@@ -2654,6 +2674,8 @@ def filter_results(source, results, aggressive):
 
     commented_out_code_line_numbers = commented_out_code_lines(source)
 
+    has_e901 = any(result['id'].lower() == 'e901' for result in results)
+
     for r in results:
         issue_id = r['id'].lower()
 
@@ -2683,6 +2705,13 @@ def filter_results(source, results, aggressive):
 
         if r['line'] in commented_out_code_line_numbers:
             if issue_id.startswith(('e26', 'e501')):
+                continue
+
+        # Do not touch indentation if there is a token error caused by
+        # incomplete multi-line statement. Otherwise, we risk screwing up the
+        # indentation.
+        if has_e901:
+            if issue_id.startswith(('e1', 'e7')):
                 continue
 
         yield r
@@ -2819,14 +2848,14 @@ def code_match(code, select, ignore):
     return True
 
 
-def fix_code(source, options=None, encoding=None):
+def fix_code(source, options=None, encoding=None, apply_config=False):
     """Return fixed source code.
 
     "encoding" will be used to decode "source" if it is a byte string.
 
     """
     if not options:
-        options = parse_args([''])
+        options = parse_args([''], apply_config=apply_config)
 
     if not isinstance(source, unicode):
         source = source.decode(encoding or locale.getpreferredencoding())
@@ -2876,9 +2905,9 @@ def fix_lines(source_lines, options, filename=''):
     return ''.join(normalize_line_endings(sio.readlines(), original_newline))
 
 
-def fix_file(filename, options=None, output=None):
+def fix_file(filename, options=None, output=None, apply_config=False):
     if not options:
-        options = parse_args([filename])
+        options = parse_args([filename], apply_config=apply_config)
 
     original_source = readlines_from_file(filename)
 
@@ -2968,15 +2997,15 @@ def apply_local_fixes(source, options):
         """Find leftmost item greater than or equal to x."""
         i = bisect.bisect_left(a, x)
         if i != len(a):
-            return i, a[i]
-        return len(a) - 1, a[-1]
+            return (i, a[i])
+        return (len(a) - 1, a[-1])
 
     def find_le(a, x):
         """Find rightmost value less than or equal to x."""
         i = bisect.bisect_right(a, x)
         if i:
-            return i - 1, a[i - 1]
-        return 0, a[0]
+            return (i - 1, a[i - 1])
+        return (0, a[0])
 
     def local_fix(source, start_log, end_log,
                   start_lines, end_lines, indents, last_line):
@@ -3000,11 +3029,19 @@ def apply_local_fixes(source, options):
         sl = slice(start_lines[start_log], end_lines[end_log] + 1)
 
         subsource = source[sl]
+        msl = multiline_string_lines(''.join(subsource),
+                                     include_docstrings=False)
         # Remove indent from subsource.
         if ind:
             for line_no in start_lines[start_log:end_log + 1]:
                 pos = line_no - start_lines[start_log]
                 subsource[pos] = subsource[pos][ind:]
+
+            # Remove indent from comments.
+            for (i, line) in enumerate(subsource):
+                if i + 1 not in msl and re.match(r'\s*#', line):
+                    if line.index('#') >= ind:
+                        subsource[i] = line[ind:]
 
         # Fix indentation of subsource.
         fixed_subsource = apply_global_fixes(''.join(subsource),
@@ -3015,7 +3052,7 @@ def apply_local_fixes(source, options):
         # Add back indent for non multi-line strings lines.
         msl = multiline_string_lines(''.join(fixed_subsource),
                                      include_docstrings=False)
-        for i, line in enumerate(fixed_subsource):
+        for (i, line) in enumerate(fixed_subsource):
             if not i + 1 in msl:
                 fixed_subsource[i] = indent + line if line != '\n' else line
 
@@ -3024,8 +3061,10 @@ def apply_local_fixes(source, options):
         # subset up until last_line, this assumes that the number of lines
         # does not change in this multiline line.
         changed_lines = len(fixed_subsource)
-        if (start_lines[end_log] != end_lines[end_log]
-                and end_lines[end_log] > last_line):
+        if (
+            start_lines[end_log] != end_lines[end_log] and
+            end_lines[end_log] > last_line
+        ):
             after_end = end_lines[end_log] - last_line
             fixed_subsource = (fixed_subsource[:-after_end] +
                                source[sl][-after_end:])
@@ -3044,7 +3083,7 @@ def apply_local_fixes(source, options):
         return re.split('[ :]', line.strip(), 1)[0] in continued_stmts
 
     assert options.line_range
-    start, end = options.line_range
+    (start, end) = options.line_range
     start -= 1
     end -= 1
     last_line = end  # We shouldn't modify lines after this cut-off.
@@ -3058,20 +3097,22 @@ def apply_local_fixes(source, options):
         # Just blank lines, this should imply that it will become '\n' ?
         return apply_global_fixes(source, options)
 
-    start_lines, indents = zip(*logical[0])
-    end_lines, _ = zip(*logical[1])
+    (start_lines, indents) = zip(*logical[0])
+    (end_lines, _) = zip(*logical[1])
 
     source = source.splitlines(True)
 
-    start_log, start = find_ge(start_lines, start)
-    end_log, end = find_le(start_lines, end)
+    (start_log, start) = find_ge(start_lines, start)
+    (end_log, end) = find_le(start_lines, end)
 
     # Look behind one line, if it's indented less than current indent
     # then we can move to this previous line knowing that its
     # indentation level will not be changed.
-    if (start_log > 0
-            and indents[start_log - 1] < indents[start_log]
-            and not is_continued_stmt(source[start_log - 1])):
+    if (
+        start_log > 0 and
+        indents[start_log - 1] < indents[start_log] and
+        not is_continued_stmt(source[start_log - 1])
+    ):
         start_log -= 1
         start = start_lines[start_log]
 
@@ -3085,7 +3126,7 @@ def apply_local_fixes(source, options):
         ind = indents[start_log]
         for t in itertools.takewhile(lambda t: t[1][1] >= ind,
                                      enumerate(logical[0][start_log:])):
-            n_log, n = start_log + t[0], t[1][0]
+            (n_log, n) = start_log + t[0], t[1][0]
 
         # Start shares indent up to n.
         if n <= end:
@@ -3098,14 +3139,16 @@ def apply_local_fixes(source, options):
 
         else:
             # Look at the line after end and see if allows us to reindent.
-            after_end_log, after_end = find_ge(start_lines, end + 1)
+            (after_end_log, after_end) = find_ge(start_lines, end + 1)
 
             if indents[after_end_log] > indents[start_log]:
-                start_log, start = find_ge(start_lines, start + 1)
+                (start_log, start) = find_ge(start_lines, start + 1)
                 continue
 
-            if (indents[after_end_log] == indents[start_log]
-                    and is_continued_stmt(source[after_end])):
+            if (
+                indents[after_end_log] == indents[start_log] and
+                is_continued_stmt(source[after_end])
+            ):
                 # Find n, the beginning of the last continued statement.
                 # Apply fix to previous block if there is one.
                 only_block = True
@@ -3120,7 +3163,7 @@ def apply_local_fixes(source, options):
                         only_block = False
                         break
                 if only_block:
-                    end_log, end = find_le(start_lines, end - 1)
+                    (end_log, end) = find_le(start_lines, end - 1)
                 continue
 
             source = local_fix(source, start_log, end_log,
@@ -3157,45 +3200,54 @@ def create_parser():
     parser.add_argument('-v', '--verbose', action='count', dest='verbose',
                         default=0,
                         help='print verbose messages; '
-                        'multiple -v result in more verbose messages')
+                             'multiple -v result in more verbose messages')
     parser.add_argument('-d', '--diff', action='store_true', dest='diff',
                         help='print the diff for the fixed source')
     parser.add_argument('-i', '--in-place', action='store_true',
                         help='make changes to files in place')
+    parser.add_argument('--global-config', metavar='filename',
+                        default=DEFAULT_CONFIG,
+                        help='path to a global pep8 config file; if this file '
+                             'does not exist then this is ignored '
+                             '(default: {0})'.format(DEFAULT_CONFIG))
+    parser.add_argument('--ignore-local-config', action='store_true',
+                        help="don't look for and apply local config files; "
+                             'if not passed, defaults are updated with any '
+                             "config files in the project's root directory")
     parser.add_argument('-r', '--recursive', action='store_true',
                         help='run recursively over directories; '
-                        'must be used with --in-place or --diff')
+                             'must be used with --in-place or --diff')
     parser.add_argument('-j', '--jobs', type=int, metavar='n', default=1,
                         help='number of parallel jobs; '
-                        'match CPU count if value is less than 1')
+                             'match CPU count if value is less than 1')
     parser.add_argument('-p', '--pep8-passes', metavar='n',
                         default=-1, type=int,
                         help='maximum number of additional pep8 passes '
-                        '(default: infinite)')
+                             '(default: infinite)')
     parser.add_argument('-a', '--aggressive', action='count', default=0,
                         help='enable non-whitespace changes; '
-                        'multiple -a result in more aggressive changes')
+                             'multiple -a result in more aggressive changes')
     parser.add_argument('--experimental', action='store_true',
                         help='enable experimental fixes')
     parser.add_argument('--exclude', metavar='globs',
                         help='exclude file/directory names that match these '
-                        'comma-separated globs')
+                             'comma-separated globs')
     parser.add_argument('--list-fixes', action='store_true',
                         help='list codes for fixes; '
                         'used by --ignore and --select')
     parser.add_argument('--ignore', metavar='errors', default='',
                         help='do not fix these errors/warnings '
-                        '(default: {0})'.format(DEFAULT_IGNORE))
+                             '(default: {0})'.format(DEFAULT_IGNORE))
     parser.add_argument('--select', metavar='errors', default='',
                         help='fix only these errors/warnings (e.g. E4,W)')
     parser.add_argument('--max-line-length', metavar='n', default=79, type=int,
                         help='set maximum allowed line length '
-                        '(default: %(default)s)')
+                             '(default: %(default)s)')
     parser.add_argument('--range', metavar='line', dest='line_range',
                         default=None, type=int, nargs=2,
                         help='only fix errors found within this inclusive '
-                        'range of line numbers (e.g. 1 99); '
-                        'line numbers are indexed at 1')
+                             'range of line numbers (e.g. 1 99); '
+                             'line numbers are indexed at 1')
     parser.add_argument('--indent-size', default=DEFAULT_INDENT_SIZE,
                         type=int, metavar='n',
                         help='number of spaces per indent level '
@@ -3206,7 +3258,7 @@ def create_parser():
     return parser
 
 
-def parse_args(arguments):
+def parse_args(arguments, apply_config=False):
     """Parse command-line options."""
     parser = create_parser()
     args = parser.parse_args(arguments)
@@ -3215,6 +3267,11 @@ def parse_args(arguments):
         parser.error('incorrect number of arguments')
 
     args.files = [decode_filename(name) for name in args.files]
+
+    if apply_config:
+        parser = read_config(args, parser)
+        args = parser.parse_args(arguments)
+        args.files = [decode_filename(name) for name in args.files]
 
     if '-' in args.files:
         if len(args.files) > 1:
@@ -3280,6 +3337,39 @@ def parse_args(arguments):
                          'to the second')
 
     return args
+
+
+def read_config(args, parser):
+    """Read both user configuration and local configuration."""
+    try:
+        from configparser import ConfigParser as SafeConfigParser
+        from configparser import Error
+    except ImportError:
+        from ConfigParser import SafeConfigParser
+        from ConfigParser import Error
+
+    config = SafeConfigParser()
+
+    try:
+        config.read(args.global_config)
+
+        if not args.ignore_local_config:
+            parent = tail = args.files and os.path.abspath(
+                os.path.commonprefix(args.files))
+            while tail:
+                if config.read([os.path.join(parent, fn)
+                                for fn in PROJECT_CONFIG]):
+                    break
+                (parent, tail) = os.path.split(parent)
+
+        defaults = dict((k.lstrip('-').replace('-', '_'), v)
+                        for k, v in config.items('pep8'))
+        parser.set_defaults(**defaults)
+    except Error:
+        # Ignore for now.
+        pass
+
+    return parser
 
 
 def _split_comma_separated(string):
@@ -3528,6 +3618,8 @@ def match_file(filename, exclude):
     for pattern in exclude:
         if fnmatch.fnmatch(base_name, pattern):
             return False
+        if fnmatch.fnmatch(filename, pattern):
+            return False
 
     if not os.path.isdir(filename) and not is_python_file(filename):
         return False
@@ -3616,7 +3708,7 @@ def wrap_output(output, encoding):
                                       else output)
 
 
-def main():
+def main(apply_config=True):
     """Tool main."""
     try:
         # Exit on broken pipe.
@@ -3626,7 +3718,7 @@ def main():
         pass
 
     try:
-        args = parse_args(sys.argv[1:])
+        args = parse_args(sys.argv[1:], apply_config=apply_config)
 
         if args.list_fixes:
             for code, description in sorted(supported_fixes()):

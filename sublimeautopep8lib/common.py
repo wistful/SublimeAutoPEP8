@@ -1,6 +1,7 @@
 from collections import namedtuple
 from contextlib import contextmanager
 import difflib
+import locale
 import os
 import re
 import sys
@@ -25,10 +26,15 @@ else:
     PLUGIN_PATH = os.path.abspath(os.path.dirname(__file__))
     sys.path.insert(0, os.path.join(PLUGIN_PATH, "packages_py3"))
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
 DEFAULT_SEARCH_DEPTH = 3
 PYCODING = re.compile("coding[:=]\s*([-\w.]+)")
+NEW_LINE = os.linesep
 VIEW_SKIP_FORMAT = 'autopep8_view_skip_format'
 VIEW_AUTOSAVE = 'autopep8_view_autosave'
 
@@ -57,6 +63,15 @@ def custom_stderr(stderr=None):
         sys.stderr = _stderr
 
 
+def get_pyencoding(text):
+    """Returns python source file encoding according PEP-236."""
+    # according pep0236 only two first lines can contain encoding definition
+    search_size = max(
+        text.find(os.linesep, max(text.find(os.linesep), 0) + 1), 0)
+    match_obj = PYCODING.search(text[:search_size])
+    return match_obj.group(1) if match_obj else locale.getpreferredencoding()
+
+
 def set_timeout(func, delay):
     if sublime.version() < '3000':
         return sublime.set_timeout(func, delay)
@@ -76,7 +91,7 @@ def create_diff(source1, source2, filepath):
     if len(lines) >= 4 and lines[-2][-1] != '\n':
         lines[-2] += '\n'
 
-    return ''.join(lines) if len(lines) >= 3 else ''
+    return u''.join(lines) if len(lines) >= 3 else u''
 
 
 def replace_text(view, region, text):
@@ -84,6 +99,16 @@ def replace_text(view, region, text):
     view.run_command(
         "auto_pep8_replace", {"text": text, "a": region.a, "b": region.b})
     restore_state(view, state)
+
+
+def rewrite_file(filepath, text, encoding):
+    try:
+        with open(filepath, 'w') as fd:
+            fd.write(text.encode(encoding))
+    except TypeError:
+        # PY3 version
+        with open(filepath, 'w', encoding=encoding) as fd:
+            fd.write(text)
 
 
 def show_result(result):
@@ -113,7 +138,7 @@ def show_result(result):
     set_timeout(lambda: sublime.status_message(''), STATUS_MESSAGE_TIMEOUT)
 
 
-def format_source(formatted, filepath, view, region):
+def format_source(formatted, filepath, view, region, encoding):
     if view:
         replace_text(view, region, formatted)
         if view.settings().get(VIEW_AUTOSAVE, False):
@@ -121,8 +146,7 @@ def format_source(formatted, filepath, view, region):
             view.settings().set(VIEW_SKIP_FORMAT, True)
             view.run_command("save")
     else:
-        with open(filepath, 'w') as fd:
-            fd.write(formatted)
+        rewrite_file(filepath, formatted, encoding)
 
 
 def worker(queue, preview, pep8_params, result=None):
@@ -132,7 +156,7 @@ def worker(queue, preview, pep8_params, result=None):
 
     result = result or []
     command_result = {}
-    source, filepath, view, region = queue.get()
+    source, filepath, view, region, encoding = queue.get()
     with custom_stderr() as stdoutput:
         # TODO(wistful): pass 'encoding' parameter to the 'fix_code' function.
         formatted = autopep8.fix_code(source, pep8_params)
@@ -145,7 +169,7 @@ def worker(queue, preview, pep8_params, result=None):
     if formatted and formatted != source:
         if not preview:
             command_result['has_changes'] = True
-            format_source(formatted, filepath, view, region)
+            format_source(formatted, filepath, view, region, encoding)
         else:
             command_result['diff'] = formatted
 

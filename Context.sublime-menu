@@ -1,12 +1,19 @@
 [
     {
-        "command": "auto_pep8",
-        "args": {"preview": false},
-        "caption": "AutoPep8 Format"
-    },
-    {
-        "command": "auto_pep8",
-        "args": {"preview": true},
-        "caption": "AutoPep8 Preview"
+        "caption": "AutoPEP8",
+        "id": "autopep8",
+        "children":
+        [
+            {
+                "command": "auto_pep8",
+                "args": {"preview": false},
+                "caption": "Format"
+            },
+            {
+                "command": "auto_pep8",
+                "args": {"preview": true},
+                "caption": "Preview"
+            }
+        ]
     }
 ]

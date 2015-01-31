@@ -1,7 +1,7 @@
 ### Sublime Auto PEP8 Formatting
 
 ## About
-Automatically formats Python code to conform to the PEP 8 style guide using [autopep8](https://github.com/hhatto/autopep8) module  
+Automatically formats Python code to conform to the PEP 8 style guide using [autopep8](https://github.com/hhatto/autopep8) module
 Supported ST2 and ST3
 
 ## Features
@@ -28,13 +28,7 @@ Once you install Package Control, restart ST2/ST3 and bring up the Command Palet
             // with syntax from `syntax_list`
             // value is base filename of the .tmLanguage syntax files
             "syntax_list": ["Python"],
-
-            // Behaviour for right click context menu (Format/Preview PEP8)
-            // "always": menu appears always, even folder doesn't contain *.py files
-            // "never":  menu never appears
-            // "ifneed": menu appears only if path or childs contain *.py file
-            "file_menu_behaviour": "ifneed",
-            "file_menu_search_depth": 3  // max search depth, uses for 'ifneed' mode
+            "file_menu_search_depth": 3  // max depth to search python files
         }
     }
 }
