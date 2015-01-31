@@ -1,3 +1,10 @@
+AutoPEP8 1.2 (2015/02/01):
+    * autopep8 1.0.4 -> 1.1
+    * changed sidebar and context menu layout
+    * fixed issue with formating in case all tabs are closed(#30)
+    * fixed issue with encoding(#31)
+    - Option "file_menu_behaviour" was removed
+
 AutoPEP8 1.1.3 (2014/10/12):
     * autopep8 1.0.3 -> 1.0.4
 
