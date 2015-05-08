@@ -26,7 +26,7 @@ def _next(iter_obj):
         return iter_obj.__next__()
 
 
-def Settings(name, default):
+def Settings(name, default):  # flake8: noqa
     """Return value by name from user settings."""
     view = sublime.active_window().active_view()
     project_config = view.settings().get('sublimeautopep8', {}) if view else {}
@@ -40,7 +40,12 @@ def pep8_params():
 
     # read settings
     for opt in ("ignore", "select", "max-line-length", "indent-size"):
-        params.append("--{0}={1}".format(opt, Settings(opt, "")))
+        opt_value = Settings(opt, "")
+        # remove white spaces as autopep8 does not trim them
+        if opt in ("ignore", "select"):
+            opt_value = ','.join(param.strip()
+                                 for param in opt_value.split(','))
+        params.append("--{0}={1}".format(opt, opt_value))
 
     if Settings("list-fixes", None):
         params.append("--{0}={1}".format(opt, Settings(opt)))
