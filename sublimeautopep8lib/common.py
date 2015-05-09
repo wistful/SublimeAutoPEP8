@@ -218,9 +218,9 @@ def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
     has_errors = False
     if not (text and settings.get('show_output_panel', False)):
-        text = "SublimeAutoPep8: There is no errors."
+        text = "SublimeAutoPep8: There are no errors."
     else:
-        text = "SublimeAutoPep8: some issue(s) not fixed:\n" + text
+        text = "SublimeAutoPep8: some issue(s) were not fixed:\n" + text
         has_errors = True
 
     view = sublime.active_window().get_output_panel("autopep8")
