@@ -21,7 +21,7 @@
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
     // value is base filename of the .tmLanguage syntax files
-    "syntax_list": ["Python"],
+    "syntax_list": ["Python", "Python (Django)"],
 
     "file_menu_search_depth": 3, // max depth to search python files
 
