@@ -25,5 +25,8 @@
 
     "file_menu_search_depth": 3, // max depth to search python files
 
-    "avoid_new_line_in_select_mode": false
+    "avoid_new_line_in_select_mode": false,
+
+    // print debug info into the console
+    "debug": false
 }

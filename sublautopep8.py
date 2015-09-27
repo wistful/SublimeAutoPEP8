@@ -1,5 +1,6 @@
 # coding=utf-8
 import glob
+import logging
 import os
 
 import sublime
@@ -17,6 +18,8 @@ try:
 except NameError:
     unicode = str
 
+VERSION = '1.3.1-dev'
+
 
 def _next(iter_obj):
     """Retrieve the next item from the iter_obj."""
@@ -26,12 +29,60 @@ def _next(iter_obj):
         return iter_obj.__next__()
 
 
+def _PrintDebugInfo():
+    """Prints debug info into the sublime console."""
+    if not is_debug():
+        return
+    message = (
+        'AutoPEP8:'
+        '\n\tsublime: version=%(subl_version)s, platform=%(subl_platform)s,'
+        ' arch=%(subl_arch)s,'
+        ' packages_path=%(subl_packages)s\n,'
+        ' installed_packages_path=%(subl_installed_packages)s'
+        '\n\tplugin: version=%(plugin_version)s'
+        '\n\tconfig: %(config)s'
+    )
+    config_keys = (
+        'max-line-length', 'list-fixes', 'ignore', 'select', 'aggressive',
+        'indent-size', 'format_on_save', 'syntax_list',
+        'file_menu_search_depth', 'avoid_new_line_in_select_mode', 'debug',
+    )
+    config = {}
+    for key in config_keys:
+        config[key] = Settings(key, None)
+    logger = get_logger()
+
+    message_values = {
+        'plugin_version': VERSION,
+        'subl_version': sublime.version(),
+        'subl_platform': sublime.platform(),
+        'subl_arch': sublime.arch(),
+        'subl_packages': sublime.packages_path(),
+        'subl_installed_packages': sublime.installed_packages_path(),
+        'config': config
+    }
+
+    logger.debug(message, message_values)
+
+
 def Settings(name, default):  # flake8: noqa
     """Return value by name from user settings."""
     view = sublime.active_window().active_view()
     project_config = view.settings().get('sublimeautopep8', {}) if view else {}
     global_config = sublime.load_settings(common.USER_CONFIG_NAME)
     return project_config.get(name, global_config.get(name, default))
+
+
+def is_debug():
+    """Returns whether debug mode is enable or not."""
+    return Settings('debug', False)
+
+
+def get_logger():
+    logger = logging.getLogger('SublimeAutoPEP8')
+    if not is_debug():
+        logger.addHandler(logging.NullHandler)
+    return logger
 
 
 def pep8_params():
@@ -59,7 +110,10 @@ def pep8_params():
 
     # autopep8.parse_args requirea at least one positional argument
     params.append('fake-file')
-    return autopep8.parse_args(params)
+
+    parsed_params = autopep8.parse_args(params)
+    get_logger().debug('autopep8.params: %s', parsed_params)
+    return parsed_params
 
 
 class AutoPep8Command(sublime_plugin.TextCommand):
@@ -200,3 +254,7 @@ class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save(self, view):
         return self.on_pre_save_async(view)
+
+# timeout is necessary for sublime3
+# because user settings is not loaded during importing plugin
+sublime.set_timeout(_PrintDebugInfo, 1000)
