@@ -19,7 +19,7 @@ try:
 except NameError:
     unicode = str
 
-VERSION = '1.3.1-rc.1'
+VERSION = '1.3.1'
 
 logger = logging.getLogger('SublimeAutoPEP8')
 logger.addHandler(logging.StreamHandler(sys.stdout))
