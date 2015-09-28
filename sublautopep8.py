@@ -1,6 +1,5 @@
 # coding=utf-8
 import glob
-import logging
 import os
 
 import sublime
@@ -18,7 +17,13 @@ try:
 except NameError:
     unicode = str
 
-VERSION = '1.3.1-dev'
+VERSION = '1.3.1-rc.1'
+
+
+def Log(message):
+    """Prints mesasge to the output console."""
+    if is_debug():
+        print('DEBUG:%s' % message)
 
 
 def _next(iter_obj):
@@ -50,7 +55,6 @@ def _PrintDebugInfo():
     config = {}
     for key in config_keys:
         config[key] = Settings(key, None)
-    logger = get_logger()
 
     message_values = {
         'plugin_version': VERSION,
@@ -61,16 +65,13 @@ def _PrintDebugInfo():
         'subl_installed_packages': sublime.installed_packages_path(),
         'config': config
     }
-
-    logger.debug(message, message_values)
+    Log(message % message_values)
 
 
 def Settings(name, default):  # flake8: noqa
     """Return value by name from user settings."""
-    view = sublime.active_window().active_view()
-    project_config = view.settings().get('sublimeautopep8', {}) if view else {}
-    global_config = sublime.load_settings(common.USER_CONFIG_NAME)
-    return project_config.get(name, global_config.get(name, default))
+    config = sublime.load_settings(common.USER_CONFIG_NAME)
+    return config.get(name, default)
 
 
 def is_debug():
@@ -112,7 +113,7 @@ def pep8_params():
     params.append('fake-file')
 
     parsed_params = autopep8.parse_args(params)
-    get_logger().debug('autopep8.params: %s', parsed_params)
+    Log('autopep8.params: %s' % parsed_params)
     return parsed_params
 
 
@@ -255,6 +256,10 @@ class AutoPep8Listener(sublime_plugin.EventListener):
     def on_pre_save(self, view):
         return self.on_pre_save_async(view)
 
-# timeout is necessary for sublime3
-# because user settings is not loaded during importing plugin
-sublime.set_timeout(_PrintDebugInfo, 1000)
+
+if sublime.version() < '3000':
+    _PrintDebugInfo()
+else:
+    # timeout is necessary for sublime3
+    # because user settings is not loaded during importing plugin
+    sublime.set_timeout(_PrintDebugInfo, 1000)
