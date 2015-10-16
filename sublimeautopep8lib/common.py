@@ -42,11 +42,8 @@ WORKER_TIMEOUT = 50 if sublime.version() < '3000' else 0
 WORKER_START_TIMEOUT = 100
 STATUS_MESSAGE_TIMEOUT = 3000
 
-if sublime.platform() == 'windows':
-    USER_CONFIG_NAME = 'AutoPep8 (Windows).sublime-settings'
-else:
-    USER_CONFIG_NAME = 'AutoPep8.sublime-settings'
-
+USER_CONFIG_NAME = 'AutoPep8.sublime-settings'
+# TODO: make different settings for different platforms
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
 
