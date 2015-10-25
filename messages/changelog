@@ -1,5 +1,5 @@
-AutoPEP8 1.3.3-dev (2015/10/18):
-    *
+AutoPEP8 1.3.3-rc1 (2015/10/25):
+    * fix issue with double 'on-save' formatting in ST3.
 
 AutoPEP8 1.3.2 (2015/10/18):
     * fix issue with user config on windows platform.
