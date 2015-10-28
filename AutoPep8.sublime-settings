@@ -28,5 +28,5 @@
     "avoid_new_line_in_select_mode": false,
 
     // print debug info into the console
-    "debug": false
+    "debug": true
 }
