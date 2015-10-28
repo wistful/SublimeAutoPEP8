@@ -19,7 +19,7 @@ try:
 except NameError:
     unicode = str
 
-VERSION = '1.3.2'
+VERSION = '1.3.3'
 
 logger = logging.getLogger('SublimeAutoPEP8')
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -256,7 +256,8 @@ class AutoPep8Listener(sublime_plugin.EventListener):
                              {"preview": False, "skip_selected": True})
 
     def on_pre_save(self, view):
-        return self.on_pre_save_async(view)
+        if sublime.version() < '3000':
+            return self.on_pre_save_async(view)
 
 
 if sublime.version() < '3000':
