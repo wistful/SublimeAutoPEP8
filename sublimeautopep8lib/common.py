@@ -80,8 +80,8 @@ def create_diff(source1, source2, filepath):
     result = difflib.unified_diff(
         StringIO(source1).readlines(),
         StringIO(source2).readlines(),
-        'original:' + filepath,
-        'fixed:' + filepath)
+        'original: %s' % filepath,
+        'fixed: %s' % filepath)
 
     # fix issue with join two last lines
     lines = [item for item in result]
