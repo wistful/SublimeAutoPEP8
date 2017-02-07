@@ -48,9 +48,10 @@ def _PrintDebugInfo():
         '\n\tconfig: %(config)s'
     )
     config_keys = (
-        'max-line-length', 'list-fixes', 'ignore', 'select', 'aggressive',
-        'indent-size', 'format_on_save', 'syntax_list',
-        'file_menu_search_depth', 'avoid_new_line_in_select_mode', 'debug',
+        'max-line-length', 'list-fixes', 'ignore', 'select', 'global-config',
+        'apply-config''aggressive', 'indent-size', 'format_on_save',
+        'syntax_list', 'file_menu_search_depth',
+        'avoid_new_line_in_select_mode', 'debug',
     )
     config = {}
     for key in config_keys:
@@ -93,8 +94,13 @@ def pep8_params():
     params = ['-d']  # args for preview
 
     # read settings
-    for opt in ("ignore", "select", "max-line-length", "indent-size"):
+    for opt in ("ignore", "select", "max-line-length", "indent-size",
+                "global-config"):
         opt_value = Settings(opt, "")
+        # skip any options that are defined as null, allows config file defaults
+        # to be used instead.
+        if opt_value is None:
+            continue
         # remove white spaces as autopep8 does not trim them
         if opt in ("ignore", "select"):
             opt_value = ','.join(param.strip()
@@ -114,7 +120,8 @@ def pep8_params():
     # autopep8.parse_args requirea at least one positional argument
     params.append('fake-file')
 
-    parsed_params = autopep8.parse_args(params)
+    parsed_params = autopep8.parse_args(
+        params, apply_config=Settings("apply-config", False))
     get_logger().debug('autopep8.params: %s', parsed_params)
     return parsed_params
 

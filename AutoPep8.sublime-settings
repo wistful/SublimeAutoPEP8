@@ -2,7 +2,7 @@
     "max-line-length": 79,
 
     // list codes for fixes; used by --ignore and --select
-    "list-fixes": "",
+    "list-fixes": false,
 
     // do not fix these errors / warnings(e.g. E4, W)
     "ignore": "E24, E226",
@@ -12,6 +12,12 @@
 
     // enable possibly unsafe changes (E711, E712)
     "aggressive": 0,
+
+    // allow autopep8 to use global config files for defaults
+    "apply-config": false,
+
+    // path to the global config file to use instead of the default
+    "global-config": null,
 
     // number of spaces per indent level
     "indent-size": 4,
