@@ -34,6 +34,8 @@ Once you install Package Control, restart ST2/ST3 and bring up the Command Palet
 }
 ```
 
+Settings that are passed to autopep8 such as `ignore`, `select`, `max-line-length`, `indent-size` and `global-config` can be set to null to allow the defaults provided by a pep8 file, e.g. `~/.config/pep8` to be used instead.
+
 ## Using
 
 + **SideBar** - right click on the file(s) or folder(s)
