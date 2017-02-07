@@ -102,7 +102,7 @@ def pep8_params():
         params.append("--{0}={1}".format(opt, opt_value))
 
     if Settings("list-fixes", None):
-        params.append("--{0}={1}".format(opt, Settings(opt)))
+        params.append("--list-fixes")
 
     for opt in ("aggressive",):
         opt_count = Settings(opt, 0)
