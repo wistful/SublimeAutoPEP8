@@ -48,7 +48,7 @@ def _PrintDebugInfo():
         '\n\tconfig: %(config)s'
     )
     config_keys = (
-        'max-line-length', 'list-fixes', 'ignore', 'select', 'aggressive',
+        'max-line-length', 'list-fixes', 'ignore', 'select',
         'indent-size', 'format_on_save', 'syntax_list',
         'file_menu_search_depth', 'avoid_new_line_in_select_mode', 'debug',
     )
@@ -104,15 +104,13 @@ def pep8_params():
     if Settings("list-fixes", None):
         params.append("--{0}={1}".format(opt, Settings(opt)))
 
-    for opt in ("aggressive",):
-        opt_count = Settings(opt, 0)
-        params.extend(["--" + opt] * opt_count)
-
     # use verbose==2 to catch non-fixed issues
     params.extend(["--" + "verbose"] * 2)
 
-    # autopep8.parse_args requirea at least one positional argument
+    # autopep8.parse_args required at least one positional argument
     params.append('fake-file')
+    params.append('--global-config=fake_path')
+    params.append('--ignore-local-config')
 
     parsed_params = autopep8.parse_args(params)
     get_logger().debug('autopep8.params: %s', parsed_params)

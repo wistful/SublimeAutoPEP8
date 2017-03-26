@@ -63,13 +63,9 @@ import token
 import tokenize
 
 try:
-    from packages_py2 import lib2to3
     from sublimeautopep8lib import pycodestyle as pep8
 except ImportError:
-    from AutoPEP8.packages_py3 import lib2to3
     from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
-
-sys.modules['lib2to3'] = lib2to3
 
 try:
     from sublimeautopep8lib import pycodestyle as pep8
