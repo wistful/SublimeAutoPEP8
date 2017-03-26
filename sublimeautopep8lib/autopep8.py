@@ -63,18 +63,13 @@ import token
 import tokenize
 
 try:
+    from packages_py2 import lib2to3
     from sublimeautopep8lib import pycodestyle as pep8
 except ImportError:
+    from AutoPEP8.packages_py3 import lib2to3
     from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
 
-_PY_VERSION = sys.version_info.major
-_EXTRA_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                 '..',
-                 'packages_py%s' % sys.version_info.major))
-sys.path.insert(0, _EXTRA_PATH)
-import lib2to3
-sys.path.remove(_EXTRA_PATH)
+sys.modules['lib2to3'] = lib2to3
 
 try:
     from sublimeautopep8lib import pycodestyle as pep8
@@ -2681,6 +2676,7 @@ def refactor_with_2to3(source_text, fixer_names, filename=''):
 
     """
     from lib2to3.refactor import RefactoringTool
+
     fixers = ['lib2to3.fixes.fix_' + name for name in fixer_names]
     tool = RefactoringTool(fixer_names=fixers, explicit=fixers)
 
