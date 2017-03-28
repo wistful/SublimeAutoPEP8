@@ -2,6 +2,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 import difflib
 import locale
+import logging
 import os
 import re
 import sys
@@ -42,6 +43,8 @@ USER_CONFIG_NAME = 'AutoPep8.sublime-settings'
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
 
 PATTERN = re.compile(r"Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)")
+
+logger = logging.getLogger('SublimeAutoPEP8.sublimeautopep8lib.common')
 
 
 @contextmanager
@@ -141,8 +144,10 @@ def format_source(formatted, filepath, view, region, encoding):
 
 
 def worker(queue, preview, pep8_params, result=None):
+    logger.debug('Start worker.')
     sublime.status_message('AutoPEP8: formatting ...')
     if queue.empty():
+        logger.debug('Queue is empty: show result.')
         return show_result(result)
 
     result = result or []
@@ -150,16 +155,23 @@ def worker(queue, preview, pep8_params, result=None):
     source, filepath, view, region, encoding = queue.get()
     with custom_stderr() as stdoutput:
         # TODO(wistful): pass 'encoding' parameter to the 'fix_code' function.
+        logger.info('Run autopep8 with %s', pep8_params)
         formatted = autopep8.fix_code(source, pep8_params)
+        logger.debug('Got formatted text.')
         if preview:
+            logger.debug('Create diff for preview.')
             formatted = create_diff(source1=source, source2=formatted,
                                     filepath=filepath)
 
     command_result['not_fixed'] = find_not_fixed(stdoutput.getvalue(),
                                                  filepath)
+    if command_result['not_fixed']:
+        logger.debug('Can not fix all issues.')
+
     if formatted and formatted != source:
         if not preview:
             command_result['has_changes'] = True
+            logger.debug('Format source text.')
             format_source(formatted, filepath, view, region, encoding)
         else:
             command_result['diff'] = formatted
