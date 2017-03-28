@@ -14,17 +14,11 @@ if sublime.version() < '3000':
 
     from sublimeautopep8lib import autopep8
 
-    PLUGIN_PATH = os.path.abspath(os.path.split(os.path.dirname(__file__))[0])
-    sys.path.insert(0, os.path.join(PLUGIN_PATH, "packages_py2"))
-
 else:
     from io import StringIO
     from queue import Queue  # NOQA
 
     from AutoPEP8.sublimeautopep8lib import autopep8
-
-    PLUGIN_PATH = os.path.abspath(os.path.dirname(__file__))
-    sys.path.insert(0, os.path.join(PLUGIN_PATH, "packages_py3"))
 
 try:
     unicode
