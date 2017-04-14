@@ -72,6 +72,10 @@ try:
 except ImportError:
     from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
 
+try:
+    from sublimeautopep8lib import argparse
+except ImportError:
+    from AutoPEP8.sublimeautopep8lib import argparse
 
 try:
     unicode
@@ -3073,9 +3077,6 @@ def extract_code_from_function(function):
 
 def create_parser():
     """Return command-line parser."""
-    # Do import locally to be friendly to those who use autopep8 as a library
-    # and are supporting Python 2.6.
-    import argparse
 
     parser = argparse.ArgumentParser(description=docstring_summary(__doc__),
                                      prog='autopep8')

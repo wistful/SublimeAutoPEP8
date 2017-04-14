@@ -19,11 +19,34 @@ try:
 except NameError:
     unicode = str
 
-VERSION = '1.3.4'
+VERSION = '1.3.5'
 
 logger = logging.getLogger('SublimeAutoPEP8')
-logger.addHandler(logging.StreamHandler(sys.stdout))
-logger.setLevel(logging.INFO)
+
+
+def _setup_logger():
+    """Setup logging for the plugin."""
+    if not Settings('debug', False):
+        return
+
+    logger = logging.getLogger('SublimeAutoPEP8')
+    logger.handlers = []
+    # Set level.
+    logger.setLevel(logging.DEBUG)
+
+    # Init handler.
+    if Settings('logfile', ''):
+        handler = logging.FileHandler(Settings('logfile', ''), encoding='utf8')
+        logger.propagate = False
+    else:
+        logger.propagate = True
+        handler = logging.StreamHandler(sys.stdout)
+
+    # Set formatter.
+    handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s - %(name)s:%(lineno)d - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
 
 def _next(iter_obj):
@@ -36,8 +59,6 @@ def _next(iter_obj):
 
 def _PrintDebugInfo():
     """Prints debug info into the sublime console."""
-    if not is_debug():
-        return
     message = (
         'AutoPEP8:'
         '\n\tsublime: version=%(subl_version)s, platform=%(subl_platform)s,'
@@ -50,7 +71,8 @@ def _PrintDebugInfo():
     config_keys = (
         'max-line-length', 'list-fixes', 'ignore', 'select',
         'indent-size', 'format_on_save', 'syntax_list',
-        'file_menu_search_depth', 'avoid_new_line_in_select_mode', 'debug',
+        'file_menu_search_depth', 'avoid_new_line_in_select_mode',
+        'debug', 'logfile',
     )
     config = {}
     for key in config_keys:
@@ -65,27 +87,16 @@ def _PrintDebugInfo():
         'subl_installed_packages': sublime.installed_packages_path(),
         'config': config
     }
-    get_logger().debug(message, message_values)
+    logger.info(message, message_values)
+    if Settings('logfile', '') or not Settings('debug', False):
+        # Print config information to the console even if there is a logfile.
+        print(message % message_values)
 
 
 def Settings(name, default):  # flake8: noqa
     """Return value by name from user settings."""
     config = sublime.load_settings(common.USER_CONFIG_NAME)
     return config.get(name, default)
-
-
-def is_debug():
-    """Returns whether debug mode is enable or not."""
-    return Settings('debug', False)
-
-
-def get_logger():
-    """Sets required log level and returns logger."""
-    if is_debug():
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-    return logger
 
 
 def pep8_params():
@@ -113,7 +124,6 @@ def pep8_params():
     params.append('--ignore-local-config')
 
     parsed_params = autopep8.parse_args(params)
-    get_logger().debug('autopep8.params: %s', parsed_params)
     return parsed_params
 
 
@@ -257,10 +267,13 @@ class AutoPep8Listener(sublime_plugin.EventListener):
         if sublime.version() < '3000':
             return self.on_pre_save_async(view)
 
+_setup_logger()
 
 if sublime.version() < '3000':
+    _setup_logger()
     _PrintDebugInfo()
 else:
     # timeout is necessary for sublime3
     # because user settings is not loaded during importing plugin
-    sublime.set_timeout(_PrintDebugInfo, 1000)
+    sublime.set_timeout(_setup_logger, 1000)
+    sublime.set_timeout(_PrintDebugInfo, 2000)
