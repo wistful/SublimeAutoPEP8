@@ -1,5 +1,7 @@
-AutoPEP8 1.3.5 (2016/03/27):
-    *
+AutoPEP8 1.3.5 (2016/04/13):
+    * fixed issue with missed argparse package in ST2.
+    + added logging
+
 AutoPEP8 1.3.4 (2016/03/27):
     - Removed 'aggressive' option from the configuration.
     * autopep8 1.1 -> 1.2.2
