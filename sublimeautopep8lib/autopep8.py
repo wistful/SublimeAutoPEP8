@@ -62,20 +62,9 @@ import textwrap
 import token
 import tokenize
 
-try:
-    from sublimeautopep8lib import pycodestyle as pep8
-except ImportError:
-    from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
+from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
 
-try:
-    from sublimeautopep8lib import pycodestyle as pep8
-except ImportError:
-    from AutoPEP8.sublimeautopep8lib import pycodestyle as pep8
-
-try:
-    from sublimeautopep8lib import argparse
-except ImportError:
-    from AutoPEP8.sublimeautopep8lib import argparse
+import argparse
 
 try:
     unicode

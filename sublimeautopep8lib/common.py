@@ -9,22 +9,10 @@ import sys
 
 import sublime
 
-if sublime.version() < '3000':
-    from Queue import Queue  # NOQA
-    from StringIO import StringIO
+from io import StringIO
+from queue import Queue  # NOQA
 
-    from sublimeautopep8lib import autopep8
-
-else:
-    from io import StringIO
-    from queue import Queue  # NOQA
-
-    from AutoPEP8.sublimeautopep8lib import autopep8
-
-try:
-    unicode
-except NameError:
-    unicode = str
+from AutoPEP8.sublimeautopep8lib import autopep8
 
 DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
 DEFAULT_SEARCH_DEPTH = 3
@@ -33,7 +21,7 @@ NEW_LINE = os.linesep
 VIEW_SKIP_FORMAT = 'autopep8_view_skip_format'
 VIEW_AUTOSAVE = 'autopep8_view_autosave'
 
-WORKER_TIMEOUT = 50 if sublime.version() < '3000' else 0
+WORKER_TIMEOUT = 0
 WORKER_START_TIMEOUT = 100
 STATUS_MESSAGE_TIMEOUT = 3000
 
@@ -42,7 +30,7 @@ USER_CONFIG_NAME = 'AutoPep8.sublime-settings'
 
 ViewState = namedtuple('ViewState', ['row', 'col', 'vector'])
 
-PATTERN = re.compile(r"Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)")
+PATTERN = re.compile(r'Not fixing (?P<code>[A-Z]{1}\d+) on line (?P<line>\d+)')
 
 logger = logging.getLogger('SublimeAutoPEP8.sublimeautopep8lib.common')
 
@@ -66,13 +54,6 @@ def get_pyencoding(text):
     return match_obj.group(1) if match_obj else locale.getpreferredencoding()
 
 
-def set_timeout(func, delay):
-    if sublime.version() < '3000':
-        return sublime.set_timeout(func, delay)
-    else:
-        return sublime.set_timeout_async(func, delay)
-
-
 def create_diff(source1, source2, filepath):
     result = difflib.unified_diff(
         StringIO(source1).readlines(),
@@ -91,18 +72,13 @@ def create_diff(source1, source2, filepath):
 def replace_text(view, region, text):
     state = save_state(view)
     view.run_command(
-        "auto_pep8_replace", {"text": text, "a": region.a, "b": region.b})
+        'auto_pep8_replace', {'text': text, 'a': region.a, 'b': region.b})
     restore_state(view, state)
 
 
 def rewrite_file(filepath, text, encoding):
-    try:
-        with open(filepath, 'w') as fd:
-            fd.write(text.encode(encoding))
-    except TypeError:
-        # PY3 version
-        with open(filepath, 'w', encoding=encoding) as fd:
-            fd.write(text)
+    with open(filepath, 'w', encoding=encoding) as fd:
+        fd.write(text)
 
 
 def show_result(result):
@@ -129,7 +105,8 @@ def show_result(result):
     if diffs:
         new_view('utf-8', '\n'.join(diffs))
 
-    set_timeout(lambda: sublime.status_message(''), STATUS_MESSAGE_TIMEOUT)
+    sublime.set_timeout_async(
+        lambda: sublime.status_message(''), STATUS_MESSAGE_TIMEOUT)
 
 
 def format_source(formatted, filepath, view, region, encoding):
@@ -178,8 +155,9 @@ def worker(queue, preview, pep8_params, result=None):
 
     result.append(command_result)
 
-    set_timeout(
-        lambda: worker(queue, preview, pep8_params, result), WORKER_TIMEOUT)
+    sublime.set_timeout_async(
+        lambda: worker(queue, preview, pep8_params, result),
+        WORKER_TIMEOUT)
 
 
 def save_state(view):
@@ -208,36 +186,36 @@ def new_view(encoding, text):
     view = sublime.active_window().new_file()
     view.set_encoding(encoding)
     view.set_syntax_file("Packages/Diff/Diff.tmLanguage")
-    view.run_command("auto_pep8_output", {"text": text})
+    view.run_command('auto_pep8_output', {'text': text})
     view.set_scratch(True)
 
 
 def hide_error_panel():
     sublime.active_window().run_command(
-        "hide_panel", {"panel": "output.autopep8"})
+        'hide_panel', {'panel': 'output.autopep8'})
 
 
 def show_error_panel(text):
     settings = sublime.load_settings(USER_CONFIG_NAME)
     has_errors = False
     if not (text and settings.get('show_output_panel', False)):
-        text = "SublimeAutoPep8: There are no errors."
+        text = 'SublimeAutoPep8: There are no errors.'
     else:
-        text = "SublimeAutoPep8: some issue(s) were not fixed:\n" + text
+        text = 'SublimeAutoPep8: some issue(s) were not fixed:\n' + text
         has_errors = True
 
-    view = sublime.active_window().get_output_panel("autopep8")
+    view = sublime.active_window().get_output_panel('autopep8')
     view.set_read_only(False)
-    view.run_command("auto_pep8_output", {"text": text})
+    view.run_command('auto_pep8_output', {'text': text})
     view.set_read_only(True)
     if has_errors:
         sublime.active_window().run_command(
-            "show_panel", {"panel": "output.autopep8"})
+            'show_panel', {'panel': 'output.autopep8'})
 
 
 def find_not_fixed(text, filepath):
-    result = ""
-    last_to_fix = text.rfind("issue(s) to fix")
+    result = ''
+    last_to_fix = text.rfind('issue(s) to fix')
     if last_to_fix > 0:
         for code, line in PATTERN.findall(text[last_to_fix:]):
             message = 'File "{0}", line {1}: not fixed {2}\n'

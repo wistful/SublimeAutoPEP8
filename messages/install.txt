@@ -2,7 +2,7 @@ Sublime Auto PEP8 Formatting
 (https://github.com/wistful/SublimeAutoPEP8)
 
 Automatically formats Python code to conform to the PEP 8 style guide using autopep8 module
-Support ST2 and ST3
+Supports ST3 only.
 
 Features:
     format / preview code according PEP8

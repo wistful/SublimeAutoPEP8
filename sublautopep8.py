@@ -7,19 +7,10 @@ import sys
 import sublime
 import sublime_plugin
 
-if sublime.version() < '3000':
-    from sublimeautopep8lib import autopep8
-    from sublimeautopep8lib import common
-else:
-    from AutoPEP8.sublimeautopep8lib import autopep8
-    from AutoPEP8.sublimeautopep8lib import common
+from AutoPEP8.sublimeautopep8lib import autopep8
+from AutoPEP8.sublimeautopep8lib import common
 
-try:
-    unicode
-except NameError:
-    unicode = str
-
-VERSION = '1.3.5'
+VERSION = '2.0.0a'
 
 logger = logging.getLogger('SublimeAutoPEP8')
 
@@ -49,24 +40,21 @@ def _setup_logger():
     logger.addHandler(handler)
 
 
-def _next(iter_obj):
-    """Retrieve the next item from the iter_obj."""
-    try:
-        return iter_obj.next()
-    except AttributeError:
-        return iter_obj.__next__()
-
-
 def _PrintDebugInfo():
-    """Prints debug info into the sublime console."""
+    """Print debug info into the sublime console."""
     message = (
+        '\n'
         'AutoPEP8:'
-        '\n\tsublime: version=%(subl_version)s, platform=%(subl_platform)s,'
-        ' arch=%(subl_arch)s,'
-        ' packages_path=%(subl_packages)s\n,'
-        ' installed_packages_path=%(subl_installed_packages)s'
-        '\n\tplugin: version=%(plugin_version)s'
-        '\n\tconfig: %(config)s'
+        '\n\tsublime:'
+        '\n\t    version=%(subl_version)s'
+        '\n\t    platform=%(subl_platform)s'
+        '\n\t    arch=%(subl_arch)s'
+        '\n\t    packages_path=%(subl_packages)s'
+        '\n\t    installed_packages_path=%(subl_installed_packages)s'
+        '\n\tplugin:'
+        '\n\t    version=%(plugin_version)s'
+        '\n\t    config: %(config)s'
+        '\n'
     )
     config_keys = (
         'max-line-length', 'list-fixes', 'ignore', 'select',
@@ -74,9 +62,10 @@ def _PrintDebugInfo():
         'file_menu_search_depth', 'avoid_new_line_in_select_mode',
         'debug', 'logfile',
     )
-    config = {}
-    for key in config_keys:
-        config[key] = Settings(key, None)
+    config = {
+        key: Settings(key, None)
+        for key in config_keys
+    }
 
     message_values = {
         'plugin_version': VERSION,
@@ -104,32 +93,31 @@ def pep8_params():
     params = ['-d']  # args for preview
 
     # read settings
-    for opt in ("ignore", "select", "max-line-length", "indent-size"):
-        opt_value = Settings(opt, "")
+    for opt in ('ignore', 'select', 'max-line-length', 'indent-size'):
+        opt_value = Settings(opt, '')
         # remove white spaces as autopep8 does not trim them
-        if opt in ("ignore", "select"):
+        if opt in ('ignore', 'select'):
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
-        params.append("--{0}={1}".format(opt, opt_value))
+        params.append('--{0}={1}'.format(opt, opt_value))
 
-    if Settings("list-fixes", None):
-        params.append("--{0}={1}".format(opt, Settings(opt)))
+    if Settings('list-fixes', None):
+        params.append('--{0}={1}'.format(opt, Settings(opt)))
 
     # use verbose==2 to catch non-fixed issues
-    params.extend(["--" + "verbose"] * 2)
+    params.extend(['--verbose'] * 2)
 
     # autopep8.parse_args required at least one positional argument
     params.append('fake-file')
     params.append('--global-config=fake_path')
     params.append('--ignore-local-config')
 
-    parsed_params = autopep8.parse_args(params)
-    return parsed_params
+    return autopep8.parse_args(params)
 
 
 class AutoPep8Command(sublime_plugin.TextCommand):
 
-    def sel(self, skip_selected):
+    def get_selection(self, skip_selected):
         region = self.view.sel()[0]
         # select all view if there is no selected region.
         if region.a == region.b or skip_selected:
@@ -139,12 +127,12 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def run(self, edit, preview=True, skip_selected=False):
         queue = common.Queue()
-        region, source, encoding = self.sel(skip_selected)
-        if not isinstance(source, unicode) and hasattr('decode'):
+        region, source, encoding = self.get_selection(skip_selected)
+        if not isinstance(source, str) and hasattr('decode'):
             source = source.decode(encoding)
 
         queue.put((source, self.view.file_name(), self.view, region, encoding))
-        common.set_timeout(
+        sublime.set_timeout_async(
             lambda: common.worker(queue, preview, pep8_params()),
             common.WORKER_START_TIMEOUT)
 
@@ -195,12 +183,12 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
                 source = fd.read()
 
             encoding = common.get_pyencoding(source)
-            if not isinstance(source, unicode) and hasattr(source, 'decode'):
+            if not isinstance(source, str) and hasattr(source, 'decode'):
                 source = source.decode(encoding)
 
             queue.put((source, path, None, None, encoding))
 
-        common.set_timeout(
+        sublime.set_timeout_async(
             lambda: common.worker(queue, preview, pep8_params()),
             common.WORKER_START_TIMEOUT)
 
@@ -224,7 +212,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             depth_path = '*/' * step + '*.py'
             search_path = os.path.join(path, depth_path)
             try:
-                _next(glob.iglob(search_path))
+                next(glob.iglob(search_path))
                 return True
             except StopIteration:
                 pass
@@ -257,23 +245,20 @@ class AutoPep8Listener(sublime_plugin.EventListener):
             view.settings().erase(common.VIEW_AUTOSAVE)
             return
         view_syntax = view.settings().get('syntax')
-        syntax_list = Settings('syntax_list', ["Python"])
+        syntax_list = Settings('syntax_list', ['Python'])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
             view.settings().set(common.VIEW_AUTOSAVE, True)
-            view.run_command("auto_pep8",
-                             {"preview": False, "skip_selected": True})
+            view.run_command('auto_pep8',
+                             {'preview': False, 'skip_selected': True})
 
-    def on_pre_save(self, view):
-        if sublime.version() < '3000':
-            return self.on_pre_save_async(view)
 
-_setup_logger()
-
-if sublime.version() < '3000':
+def on_ready():
+    """Runs code once plugin is loaded."""
     _setup_logger()
     _PrintDebugInfo()
-else:
-    # timeout is necessary for sublime3
-    # because user settings is not loaded during importing plugin
-    sublime.set_timeout(_setup_logger, 1000)
-    sublime.set_timeout(_PrintDebugInfo, 2000)
+
+
+# Timeout is required for ST3
+# as plugin_host loading asynchronously
+# and it is not possible to use sublime API at import time.
+sublime.set_timeout_async(on_ready, 0)
