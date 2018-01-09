@@ -15,9 +15,28 @@ VERSION = '2.0.0a'
 logger = logging.getLogger('SublimeAutoPEP8')
 
 
+AUTOPEP8_OPTIONS = (
+    'global-config',
+    'ignore-local-config',
+    'list-fixes',
+    'ignore',
+    'select',
+    'max-line-length',
+    'indent-size',
+    'exclude',
+)
+
+
+def get_user_settings():
+    """Returns user settings related to the plugin."""
+    return sublime.load_settings(common.USER_CONFIG_NAME)
+
+
 def _setup_logger():
     """Setup logging for the plugin."""
-    if not Settings('debug', False):
+    user_settings = get_user_settings()
+
+    if not user_settings.get('debug', False):
         return
 
     logger = logging.getLogger('SublimeAutoPEP8')
@@ -26,8 +45,9 @@ def _setup_logger():
     logger.setLevel(logging.DEBUG)
 
     # Init handler.
-    if Settings('logfile', ''):
-        handler = logging.FileHandler(Settings('logfile', ''), encoding='utf8')
+    if user_settings.get('logfile', ''):
+        handler = logging.FileHandler(user_settings.get('logfile', ''),
+                                      encoding='utf8')
         logger.propagate = False
     else:
         logger.propagate = True
@@ -42,6 +62,8 @@ def _setup_logger():
 
 def _PrintDebugInfo():
     """Print debug info into the sublime console."""
+    user_settings = get_user_settings()
+
     message = (
         '\n'
         'AutoPEP8:'
@@ -56,15 +78,18 @@ def _PrintDebugInfo():
         '\n\t    config: %(config)s'
         '\n'
     )
-    config_keys = (
-        'max-line-length', 'list-fixes', 'ignore', 'select',
-        'indent-size', 'format_on_save', 'syntax_list',
-        'file_menu_search_depth', 'avoid_new_line_in_select_mode',
-        'debug', 'logfile',
+
+    plugin_keys = (
+        'format_on_save',
+        'syntax_list',
+        'file_menu_search_depth',
+        'avoid_new_line_in_select_mode',
+        'debug',
+        'logfile',
     )
     config = {
-        key: Settings(key, None)
-        for key in config_keys
+        key: user_settings.get(key, None)
+        for key in AUTOPEP8_OPTIONS + plugin_keys
     }
 
     message_values = {
@@ -77,42 +102,58 @@ def _PrintDebugInfo():
         'config': config
     }
     logger.info(message, message_values)
-    if Settings('logfile', '') or not Settings('debug', False):
+    print_message = any([
+        user_settings.get('logfile', ''),
+        not user_settings.get('debug', False)
+    ])
+    if print_message:
         # Print config information to the console even if there is a logfile.
         print(message % message_values)
 
 
-def Settings(name, default):  # flake8: noqa
-    """Return value by name from user settings."""
-    config = sublime.load_settings(common.USER_CONFIG_NAME)
-    return config.get(name, default)
+def _get_autopep8_params_from_localconfig():
+    """Reaturns a dict with parameters from local pycodestyle config."""
+    parser = autopep8.read_config(args, autopep8.create_parser())
+    return {
+        opt: parser.get_default(opt)
+        for opt in (opt.replace('-', '_') for opt in AUTOPEP8_OPTIONS)
+    }
 
 
 def pep8_params():
     """Return params for the autopep8 module."""
-    params = ['-d']  # args for preview
+    user_settings = get_user_settings()
+    env_vars = sublime.active_window().extract_variables()
 
+    params = ['-d']  # args for preview
     # read settings
-    for opt in ('ignore', 'select', 'max-line-length', 'indent-size'):
-        opt_value = Settings(opt, '')
-        # remove white spaces as autopep8 does not trim them
-        if opt in ('ignore', 'select'):
+    for opt in AUTOPEP8_OPTIONS:
+        opt_value = user_settings.get(opt, '')
+        if opt_value == '':
+            continue
+        if opt_value and opt in ('exclude', 'global-config'):
+            opt_value = sublime.expand_variables(opt_value, env_vars)
+
+        if opt in ('ignore', 'select', 'exclude'):
+            # remove white spaces as autopep8 does not trim them
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
-        params.append('--{0}={1}'.format(opt, opt_value))
-
-    if Settings('list-fixes', None):
-        params.append('--{0}={1}'.format(opt, Settings(opt)))
+            params.append('--{0}={1}'.format(opt, opt_value))
+        elif opt == 'ignore-local-config' and opt_value:
+            params.append('--{0}'.format(opt))
+        elif opt == 'global-config' and opt_value:
+            params.append('--{0}={1}'.format(opt, opt_value))
 
     # use verbose==2 to catch non-fixed issues
     params.extend(['--verbose'] * 2)
 
-    # autopep8.parse_args required at least one positional argument
-    params.append('fake-file')
-    params.append('--global-config=fake_path')
-    params.append('--ignore-local-config')
+    # autopep8.parse_args required at least one positional argument,
+    # fake-file parent folder is used as location for local configs.
+    params.append(sublime.expand_variables('${folder}/fake-file', env_vars))
 
-    return autopep8.parse_args(params)
+    # return autopep8.parse_args(params, apply_config=True)
+    args = autopep8.parse_args(params, apply_config=True)
+    return args
 
 
 class AutoPep8Command(sublime_plugin.TextCommand):
@@ -138,7 +179,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
     def is_enabled(self, *args):
         view_syntax = self.view.settings().get('syntax')
-        syntax_list = Settings('syntax_list', ["Python"])
+        syntax_list = get_user_settings().get('syntax_list', ["Python"])
         filename = os.path.basename(view_syntax)
         return os.path.splitext(filename)[0] in syntax_list
 
@@ -159,8 +200,10 @@ class AutoPep8OutputCommand(sublime_plugin.TextCommand):
 class AutoPep8ReplaceCommand(sublime_plugin.TextCommand):
 
     def run(self, edit, text, a, b):
+        user_settings = get_user_settings()
         region = sublime.Region(int(a), int(b))
-        remove_last_line = Settings('avoid_new_line_in_select_mode', False)
+        remove_last_line = user_settings.get('avoid_new_line_in_select_mode',
+                                             False)
         if region.b - region.a < self.view.size() and remove_last_line:
             lines = text.split('\n')
             if not lines[-1]:
@@ -178,7 +221,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             return
         queue = common.Queue()
 
-        for path in self.files(paths):
+        for path in self.files(paths, pep8_params().exclude):
             with open(path, 'r') as fd:
                 source = fd.read()
 
@@ -192,20 +235,10 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             lambda: common.worker(queue, preview, pep8_params()),
             common.WORKER_START_TIMEOUT)
 
-    def py_files_from_dir(self, path):
-        for dirpath, dirnames, filenames in os.walk(path):
-            for filename in filenames:
-                if filename.endswith('.py'):
-                    yield os.path.join(dirpath, filename)
-
-    def files(self, paths):
-        for path in paths:
-            if os.path.isfile(path) and path.endswith('.py'):
+    def files(self, paths, exclude=None):
+        for path in autopep8.find_files(paths, recursive=True, exclude=exclude):
+            if path.endswith('.py'):
                 yield path
-                continue
-            if os.path.isdir(path):
-                for file_path in self.py_files_from_dir(path):
-                    yield file_path
 
     def has_pyfiles(self, path, depth):
         for step in range(depth):
@@ -221,7 +254,8 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
     def check_paths(self, paths):
         if not paths:
             return False
-        depth = Settings('file_menu_search_depth', common.DEFAULT_SEARCH_DEPTH)
+        depth = get_user_settings().get('file_menu_search_depth',
+                                        common.DEFAULT_SEARCH_DEPTH)
         for path in paths:
             if os.path.isdir(path) and self.has_pyfiles(path, depth):
                 return True
@@ -239,13 +273,14 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
 class AutoPep8Listener(sublime_plugin.EventListener):
 
     def on_pre_save_async(self, view):
+        user_settings = get_user_settings()
         skip_format = view.settings().get(common.VIEW_SKIP_FORMAT, False)
-        if not Settings('format_on_save', False) or skip_format:
+        if not user_settings.get('format_on_save', False) or skip_format:
             view.settings().erase(common.VIEW_SKIP_FORMAT)
             view.settings().erase(common.VIEW_AUTOSAVE)
             return
         view_syntax = view.settings().get('syntax')
-        syntax_list = Settings('syntax_list', ['Python'])
+        syntax_list = user_settings.get('syntax_list', ['Python'])
         if os.path.splitext(os.path.basename(view_syntax))[0] in syntax_list:
             view.settings().set(common.VIEW_AUTOSAVE, True)
             view.run_command('auto_pep8',

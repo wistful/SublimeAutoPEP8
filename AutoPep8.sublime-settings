@@ -5,13 +5,16 @@
     "list-fixes": "",
 
     // do not fix these errors / warnings(e.g. E4, W)
-    "ignore": "E24, E226",
+    "ignore": "",
 
     // select errors / warnings(e.g. E4, W)
     "select": "",
 
     // number of spaces per indent level
     "indent-size": 4,
+
+    "ignore-local-config": false,
+    "global-config": "",
 
     "format_on_save": false,
     "show_output_panel": true,
