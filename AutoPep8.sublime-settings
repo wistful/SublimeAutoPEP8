@@ -1,35 +1,47 @@
 {
     "max-line-length": 79,
 
-    // list codes for fixes; used by --ignore and --select
+    // List codes for fixes; used by --ignore and --select
     "list-fixes": "",
 
-    // do not fix these errors / warnings(e.g. E4, W)
+    // Do not fix these errors / warnings(e.g. E4, W)
     "ignore": "",
 
-    // select errors / warnings(e.g. E4, W)
+    // Select errors / warnings(e.g. E4, W)
     "select": "",
 
-    // exclude files or directories which match these comma separated patterns
-    "exclude": "",
-
-    // number of spaces per indent level
+    // Number of spaces per indent level
     "indent-size": 4,
 
+    // Don't look for and apply local config files;
+    // if false, defaults are updated with any config files in the project's root directory.
     "ignore-local-config": false,
+
+    // Path to a global pep8 config file;
+    // if this file doesnot exist then this is ignored.
     "global-config": "",
 
+    // Specifies whether or not format files once they saved.
     "format_on_save": false,
+
+    // If true - open new output panel with format/preview results.
     "show_output_panel": true,
+
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
     // value is base filename of the .tmLanguage syntax files
     "syntax_list": ["Python"],
 
+    // The value shows how deep the plugin should look for *.py files
+    // before disabling "Preview" and "Format" items in the Side Bar "AutoPep8" Context Menu.
     "file_menu_search_depth": 3, // max depth to search python files
 
+    // If value is false(default)
+    // then formatter doesn't treat absence of bottom empty line as an error
+    // and doesn't try to fix it.
     "avoid_new_line_in_select_mode": false,
 
-    // print debug info into the console
+    // For debug purporse only.
     "debug": false,
+    "logfile": ""  // File to store debug messages.
 }
