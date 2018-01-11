@@ -10,6 +10,9 @@
     // select errors / warnings(e.g. E4, W)
     "select": "",
 
+    // exclude files or directories which match these comma separated patterns
+    "exclude": "",
+
     // number of spaces per indent level
     "indent-size": 4,
 
@@ -28,5 +31,5 @@
     "avoid_new_line_in_select_mode": false,
 
     // print debug info into the console
-    "debug": false
+    "debug": false,
 }

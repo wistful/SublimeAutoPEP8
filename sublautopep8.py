@@ -129,7 +129,7 @@ def pep8_params():
     # read settings
     for opt in AUTOPEP8_OPTIONS:
         opt_value = user_settings.get(opt, '')
-        if opt_value == '':
+        if opt_value == '' or opt_value is None:
             continue
         if opt_value and opt in ('exclude', 'global-config'):
             opt_value = sublime.expand_variables(opt_value, env_vars)
