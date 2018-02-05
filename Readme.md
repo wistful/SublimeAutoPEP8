@@ -1,9 +1,9 @@
 ### Sublime Auto PEP8 Formatting
 
 ## About
-Automatically formats Python code to conform to the PEP 8 style guide using [autopep8](https://github.com/hhatto/autopep8) module.
+Automatically formats Python code to conform to the PEP 8 style guide using [autopep8](https://github.com/hhatto/autopep8) library.
 
-Supported ST3 only.
+**Supports ST3 only**.
 
 ## Features
 + format / preview code according PEP8
@@ -17,6 +17,10 @@ The easiest way to install AutoPEP8 in through Package Control,
 which can be found at this site: [http://wbond.net/sublime_packages/package_control](http://wbond.net/sublime_packages/package_control).
 
 Once you install Package Control, restart ST2/ST3 and bring up the Command Palette (`Command+Shift+P` on OS X, `Control+Shift+P` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select AutoPEP8 when the list appears.
+
+## Pep8(pycodestyle) configuration
+The extenstion supports both `--global-config` and `--ignore-local-config` options from the [autopep8](https://github.com/hhatto/autopep8).
+
 
 ## Settings
 ```javascript
