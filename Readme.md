@@ -28,9 +28,6 @@ The extenstion supports both `--global-config` and `--ignore-local-config` optio
 
     "max-line-length": 79,
 
-    // List codes for fixes; used by --ignore and --select
-    "list-fixes": "",
-
     // Do not fix these errors / warnings(e.g. E4, W)
     "ignore": "",
 
@@ -47,6 +44,9 @@ The extenstion supports both `--global-config` and `--ignore-local-config` optio
     // Path to a global pep8 config file;
     // if this file doesnot exist then this is ignored.
     "global-config": "",
+
+    // Hang closing bracket instead of matching indentation of opening bracket's line.
+    "hang-closing": false,
 
     // Specifies whether or not format files once they saved.
     "format_on_save": false,
