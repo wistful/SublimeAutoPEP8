@@ -25,6 +25,7 @@ AUTOPEP8_OPTIONS = (
     'max-line-length',
     'indent-size',
     'exclude',
+    'hang-closing',
 )
 
 
@@ -135,7 +136,7 @@ def pep8_params():
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
             params.append('--{0}={1}'.format(opt, opt_value))
-        elif opt == 'ignore-local-config':
+        elif opt in ('ignore-local-config', 'hang-closing'):
             if opt_value:
                 params.append('--{0}'.format(opt))
         else:
@@ -148,8 +149,7 @@ def pep8_params():
     # fake-file parent folder is used as location for local configs.
     params.append(sublime.expand_variables('${folder}/fake-file', env_vars))
 
-    print('pep8_params: %s' % params)
-    # return autopep8.parse_args(params, apply_config=True)
+    logger.info('pep8_params: %s', params)
     args = autopep8.parse_args(params, apply_config=True)
     return args
 

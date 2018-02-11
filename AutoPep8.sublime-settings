@@ -18,6 +18,9 @@
     // if this file doesnot exist then this is ignored.
     "global-config": "",
 
+    // Hang closing bracket instead of matching indentation of opening bracket's line.
+    "hang-closing": false,
+
     // Specifies whether or not format files once they saved.
     "format_on_save": false,
 
