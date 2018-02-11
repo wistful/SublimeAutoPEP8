@@ -12,7 +12,7 @@ import sublime_plugin
 from AutoPEP8.sublimeautopep8lib import autopep8
 from AutoPEP8.sublimeautopep8lib import common
 
-VERSION = '2.0.0'
+VERSION = '2.1.0'
 
 logger = logging.getLogger('SublimeAutoPEP8')
 
