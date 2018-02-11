@@ -1,9 +1,6 @@
 {
     "max-line-length": 79,
 
-    // List codes for fixes; used by --ignore and --select
-    "list-fixes": "",
-
     // Do not fix these errors / warnings(e.g. E4, W)
     "ignore": "",
 

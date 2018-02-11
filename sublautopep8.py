@@ -1,4 +1,6 @@
 # coding=utf-8
+"""SublimeAutoPEP8 plugin."""
+
 import glob
 import logging
 import os
@@ -18,7 +20,6 @@ logger = logging.getLogger('SublimeAutoPEP8')
 AUTOPEP8_OPTIONS = (
     'global-config',
     'ignore-local-config',
-    'list-fixes',
     'ignore',
     'select',
     'max-line-length',
@@ -28,7 +29,7 @@ AUTOPEP8_OPTIONS = (
 
 
 def get_user_settings():
-    """Returns user settings related to the plugin."""
+    """Return user settings related to the plugin."""
     return sublime.load_settings(common.USER_CONFIG_NAME)
 
 
@@ -60,7 +61,7 @@ def _setup_logger():
     logger.addHandler(handler)
 
 
-def _PrintDebugInfo():
+def _print_debug_info():
     """Print debug info into the sublime console."""
     user_settings = get_user_settings()
 
@@ -111,15 +112,6 @@ def _PrintDebugInfo():
         print(message % message_values)
 
 
-def _get_autopep8_params_from_localconfig():
-    """Reaturns a dict with parameters from local pycodestyle config."""
-    parser = autopep8.read_config(args, autopep8.create_parser())
-    return {
-        opt: parser.get_default(opt)
-        for opt in (opt.replace('-', '_') for opt in AUTOPEP8_OPTIONS)
-    }
-
-
 def pep8_params():
     """Return params for the autopep8 module."""
     user_settings = get_user_settings()
@@ -134,14 +126,19 @@ def pep8_params():
         if opt_value and opt in ('exclude', 'global-config'):
             opt_value = sublime.expand_variables(opt_value, env_vars)
 
-        if opt in ('ignore', 'select', 'exclude'):
+        if opt in ('exclude', 'global-config'):
+            if opt_value:
+                opt_value = sublime.expand_variables(opt_value, env_vars)
+                params.append('--{0}={1}'.format(opt, opt_value))
+        elif opt in ('ignore', 'select', 'exclude'):
             # remove white spaces as autopep8 does not trim them
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
             params.append('--{0}={1}'.format(opt, opt_value))
-        elif opt == 'ignore-local-config' and opt_value:
-            params.append('--{0}'.format(opt))
-        elif opt == 'global-config' and opt_value:
+        elif opt == 'ignore-local-config':
+            if opt_value:
+                params.append('--{0}'.format(opt))
+        else:
             params.append('--{0}={1}'.format(opt, opt_value))
 
     # use verbose==2 to catch non-fixed issues
@@ -151,6 +148,7 @@ def pep8_params():
     # fake-file parent folder is used as location for local configs.
     params.append(sublime.expand_variables('${folder}/fake-file', env_vars))
 
+    print('pep8_params: %s' % params)
     # return autopep8.parse_args(params, apply_config=True)
     args = autopep8.parse_args(params, apply_config=True)
     return args
@@ -288,9 +286,9 @@ class AutoPep8Listener(sublime_plugin.EventListener):
 
 
 def on_ready():
-    """Runs code once plugin is loaded."""
+    """Run code once plugin is loaded."""
     _setup_logger()
-    _PrintDebugInfo()
+    _print_debug_info()
 
 
 # Timeout is required for ST3
