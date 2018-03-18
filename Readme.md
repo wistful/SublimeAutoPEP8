@@ -10,7 +10,7 @@ Automatically formats Python code to conform to the PEP 8 style guide using [aut
 + format / preview selected text
 + format / preview all python modules in folder
 + side bar menu
-+ formated code while saving
++ format code while saving
 
 ## Installing
 The easiest way to install AutoPEP8 in through Package Control,
