@@ -30,7 +30,7 @@
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
     // value is base filename of the .tmLanguage syntax files
-    "syntax_list": ["Python"],
+    "syntax_list": ["Python", "Python Django"],
 
     // The value shows how deep the plugin should look for *.py files
     // before disabling "Preview" and "Format" items in the Side Bar "AutoPep8" Context Menu.
