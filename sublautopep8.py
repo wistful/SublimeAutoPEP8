@@ -27,6 +27,7 @@ AUTOPEP8_OPTIONS = (
     'exclude',
     'hang-closing',
     'experimental',
+    'agressive',
 )
 
 
@@ -140,6 +141,8 @@ def pep8_params():
         elif opt in ('ignore-local-config', 'hang-closing', 'experimental'):
             if opt_value:
                 params.append('--{0}'.format(opt))
+        elif opt == 'agressive':
+            params.extend(['--agressive'] * opt_value)
         else:
             params.append('--{0}={1}'.format(opt, opt_value))
 
