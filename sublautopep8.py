@@ -26,6 +26,7 @@ AUTOPEP8_OPTIONS = (
     'indent-size',
     'exclude',
     'hang-closing',
+    'experimental',
 )
 
 
@@ -136,7 +137,7 @@ def pep8_params():
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
             params.append('--{0}={1}'.format(opt, opt_value))
-        elif opt in ('ignore-local-config', 'hang-closing'):
+        elif opt in ('ignore-local-config', 'hang-closing', 'experimental'):
             if opt_value:
                 params.append('--{0}'.format(opt))
         else:
