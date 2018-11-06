@@ -131,7 +131,7 @@ def pep8_params():
             if opt_value:
                 opt_value = sublime.expand_variables(opt_value, env_vars)
                 params.append('--{0}={1}'.format(opt, opt_value))
-        elif opt in ('ignore', 'select', 'exclude'):
+        elif opt in ('ignore', 'select'):
             # remove white spaces as autopep8 does not trim them
             opt_value = ','.join(param.strip()
                                  for param in opt_value.split(','))
