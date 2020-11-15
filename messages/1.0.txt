@@ -1,9 +1,0 @@
-AutoPEP8 1.0 Changelog:
-+ support ST3
-+ support per-project settings (https://github.com/wistful/SublimeAutoPEP8/blob/master/Readme.md#per-project-settings)
-+ show unfixed errors in the output panel
-+ syntax can be provided by settings (`syntax_list` option)
-+ use threads to avoid freezing sublime
-* fix issue with `format_on_save` option
-+ added `aggressive` option 
-* change default values of `verbose` and `ignore` options
