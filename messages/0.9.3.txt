@@ -1,3 +1,0 @@
-AutoPEP8 0.9.3 Changelog:
-+ support ST3
-* change list options in the config
