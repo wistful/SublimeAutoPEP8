@@ -13,10 +13,10 @@ Automatically formats Python code to conform to the PEP 8 style guide using [aut
 + format code while saving
 
 ## Installing
-The easiest way to install AutoPEP8 in through Package Control,
+The easiest way to install AutoPEP8_2020 in through Package Control,
 which can be found at this site: [http://wbond.net/sublime_packages/package_control](http://wbond.net/sublime_packages/package_control).
 
-Once you install Package Control, restart ST3 and bring up the Command Palette (`Command+Shift+P` on OS X, `Control+Shift+P` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select AutoPEP8 when the list appears.
+Once you install Package Control, restart ST3 and bring up the Command Palette (`Command+Shift+P` on OS X, `Control+Shift+P` on Linux/Windows). Select "Package Control: Install Package", wait while Package Control fetches the latest package list, then select AutoPEP8_2020 when the list appears.
 
 ## Pep8(pycodestyle) configuration
 The extenstion supports both `--global-config` and `--ignore-local-config` options from the [autopep8](https://github.com/hhatto/autopep8).
