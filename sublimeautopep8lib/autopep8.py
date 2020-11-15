@@ -67,8 +67,8 @@ except ImportError:
     from ConfigParser import SafeConfigParser
     from ConfigParser import Error
 
-import pycodestyle
-from pycodestyle import STARTSWITH_INDENT_STATEMENT_REGEX
+from AutoPEP8.sublimeautopep8lib import pycodestyle
+from AutoPEP8.sublimeautopep8lib.pycodestyle import STARTSWITH_INDENT_STATEMENT_REGEX
 
 
 try:
