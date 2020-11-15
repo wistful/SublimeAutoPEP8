@@ -1,3 +1,7 @@
+AutoPEP8 2.2.1 (2020/11/15):
+    * Update pycodestyle 2.4.0 -> 2.6.0
+    * Upgraded autopep8 1.4.0 -> 1.5.4
+
 AutoPEP8 2.2.0 (2018/11/05):
     + Added Djaneiro Python syntax by default (thanks ferrum-salvator).
     * Upgraded pycodestyle 2.3.1 -> 2.4.0
