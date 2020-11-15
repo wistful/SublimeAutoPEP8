@@ -1,3 +1,0 @@
-AutoPEP8 0.9 Changelog:
-* use autopep8.py module instead of spawn the process
-+ improve speed of formatting
