@@ -1,4 +1,4 @@
 [
-	{ "keys": ["ctrl+8"], "command": "auto_pep8", "args": {"preview": true} },
+	{ "keys": ["alt+shift+l"], "command": "auto_pep8", "args": {"preview": true} },
 	{ "keys": ["ctrl+shift+l"], "command": "auto_pep8", "args": {"preview": false} }
 ]
