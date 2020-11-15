@@ -52,7 +52,7 @@ The extenstion supports both `--global-config` and `--ignore-local-config` optio
     "format_on_save": false,
 
     // If true - open new output panel with format/preview results.
-    "show_output_panel": true,
+    "show_output_panel": false,
 
     // Format/Preview menu items only appear for views
     // with syntax from `syntax_list`
@@ -81,4 +81,4 @@ The extenstion supports both `--global-config` and `--ignore-local-config` optio
 + **Selected text** - right click on the selected text
 + **On Save** - provide by settings: option `format_on_save`
 + **Command Palette** - bring up the Command Palette and select `PEP8: Format Code` or `PEP8: Preview Changes`
-+ **Hotkeys** - `Command/Control + Shift + 8` to format code, `Command/Control + 8` to preview changes
++ **Hotkeys** - `Command/Control + Shift + l` to format code, `Command/Control + 8` to preview changes
