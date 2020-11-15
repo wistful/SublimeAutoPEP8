@@ -1,4 +1,0 @@
-AutoPEP8 0.9.2 Changelog:
-+ Initial support for ST3. (thanks dnatag)
-* update pep8.py to version 1.4.6a0
-* update autopep8.py to version 0.8.7
