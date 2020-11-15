@@ -1,6 +1,0 @@
-AutoPEP8 0.7 Changelog:
-+ autoformat on save
-+ sidebar menu
-+ autoformat/preview selected text
-- cursor and scroll position are lost after "Format Code"
-- encoding issue
