@@ -5,6 +5,10 @@ Automatically formats Python code to conform to the PEP 8 style guide using [aut
 
 **Supports ST3 only**.
 
+**Note**: The _walrus_(`if thing := foo.bar.baz: pass`) operator is not supported. 
+Auto-formatting is running by SublimeText python interpreter, 
+which is locked to version 3.3, and _walrus_ operator is supporter starting python3.8.
+
 ## Features
 + format / preview code according PEP8
 + format / preview selected text
