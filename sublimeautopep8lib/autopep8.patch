@@ -1,0 +1,24 @@
+diff --git a/sublimeautopep8lib/autopep8.py b/sublimeautopep8lib/autopep8.py
+index 47f83bd..2f2f999 100644
+--- a/sublimeautopep8lib/autopep8.py
++++ b/sublimeautopep8lib/autopep8.py
+@@ -67,9 +67,8 @@ except ImportError:
+     from ConfigParser import SafeConfigParser
+     from ConfigParser import Error
+ 
+-import toml
+-import pycodestyle
+-from pycodestyle import STARTSWITH_INDENT_STATEMENT_REGEX
++from AutoPEP8.sublimeautopep8lib import pycodestyle
++from AutoPEP8.sublimeautopep8lib.pycodestyle import STARTSWITH_INDENT_STATEMENT_REGEX
+ 
+ 
+ try:
+@@ -3985,6 +3984,7 @@ def read_config(args, parser):
+ 
+ def read_pyproject_toml(args, parser):
+     """Read pyproject.toml and load configuration."""
++    import toml
+     config = None
+ 
+     if os.path.exists(args.global_config):
