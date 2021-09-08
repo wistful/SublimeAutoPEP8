@@ -113,7 +113,7 @@ def _print_debug_info():
         print(message % message_values)
 
 
-def pep8_params():
+def pep8_params(files):
     """Return params for the autopep8 module."""
     user_settings = get_user_settings()
     env_vars = sublime.active_window().extract_variables()
@@ -143,9 +143,10 @@ def pep8_params():
     # use verbose==2 to catch non-fixed issues
     params.extend(['--verbose'] * 2)
 
-    # autopep8.parse_args required at least one positional argument,
-    # fake-file parent folder is used as location for local configs.
-    params.append(sublime.expand_variables('${folder}/fake-file', env_vars))
+    # autopep8.parse_args requires at least one positional argument,
+    # and uses it as start location to look for local configs.
+    for file in files:
+        params.append(sublime.expand_variables(file, env_vars))
 
     logger.info('pep8_params: %s', params)
     args = autopep8.parse_args(params, apply_config=True)
@@ -170,7 +171,7 @@ class AutoPep8Command(sublime_plugin.TextCommand):
 
         queue.put((source, self.view.file_name(), self.view, region, encoding))
         sublime.set_timeout_async(
-            lambda: common.worker(queue, preview, pep8_params()),
+            lambda: common.worker(queue, preview, pep8_params(['${file}'])),
             common.WORKER_START_TIMEOUT)
 
     def is_enabled(self, *args):
@@ -217,7 +218,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             return
         queue = common.Queue()
 
-        for path in self.files(paths, pep8_params().exclude):
+        for path in self.files(paths, pep8_params(paths).exclude):
             with open(path, 'r') as fd:
                 source = fd.read()
 
@@ -228,7 +229,7 @@ class AutoPep8FileCommand(sublime_plugin.WindowCommand):
             queue.put((source, path, None, None, encoding))
 
         sublime.set_timeout_async(
-            lambda: common.worker(queue, preview, pep8_params()),
+            lambda: common.worker(queue, preview, pep8_params(paths)),
             common.WORKER_START_TIMEOUT)
 
     def files(self, paths, exclude=None):
