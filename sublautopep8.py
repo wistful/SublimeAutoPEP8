@@ -1,6 +1,5 @@
 # coding=utf-8
 """SublimeAutoPEP8 plugin."""
-
 import glob
 import logging
 import os
@@ -9,10 +8,14 @@ import sys
 import sublime
 import sublime_plugin
 
-from AutoPEP8.sublimeautopep8lib import autopep8
-from AutoPEP8.sublimeautopep8lib import common
+try:
+    from .sublimeautopep8lib import autopep8
+    from .sublimeautopep8lib import common
+except ImportError:
+    from sublimeautopep8lib import autopep8
+    from sublimeautopep8lib import common
 
-VERSION = '2.3.0'
+VERSION = '2.4.0'
 
 logger = logging.getLogger('SublimeAutoPEP8')
 

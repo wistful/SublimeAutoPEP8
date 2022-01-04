@@ -12,7 +12,11 @@ import sublime
 from io import StringIO
 from queue import Queue  # NOQA
 
-from AutoPEP8.sublimeautopep8lib import autopep8
+
+try:
+    from SublimeAutoPEP8.sublimeautopep8lib import autopep8
+except ImportError:
+    import autopep8
 
 DEFAULT_FILE_MENU_BEHAVIOUR = 'ifneed'
 DEFAULT_SEARCH_DEPTH = 3
