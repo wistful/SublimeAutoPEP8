@@ -12,7 +12,6 @@ import sublime
 from io import StringIO
 from queue import Queue  # NOQA
 
-
 try:
     from SublimeAutoPEP8.sublimeautopep8lib import autopep8
 except ImportError:

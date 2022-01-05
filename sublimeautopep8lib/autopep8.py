@@ -94,7 +94,6 @@ except ImportError:
     import pycodestyle
     from pycodestyle import STARTSWITH_INDENT_STATEMENT_REGEX
 
-
 try:
     unicode
 except NameError:
