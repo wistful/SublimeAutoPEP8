@@ -2251,7 +2251,7 @@ class ReformattedLines(object):
         if so, to remove extraneous whitespaces and add a line
         break/indent before it if needed.
         """
-        if unicode(item) == '=':
+        if unicode(item) == '=' and self._prev_item != ':':
             # This is the assignment in the initializer. Just remove spaces for
             # now.
             self._delete_whitespace()
