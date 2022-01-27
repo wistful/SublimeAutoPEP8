@@ -110,9 +110,9 @@ KEYWORDS = frozenset(keyword.kwlist + ['print', 'async']) - SINGLETONS
 UNARY_OPERATORS = frozenset(['>>', '**', '*', '+', '-'])
 ARITHMETIC_OP = frozenset(['**', '*', '/', '//', '+', '-', '@'])
 WS_OPTIONAL_OPERATORS = ARITHMETIC_OP.union(['^', '&', '|', '<<', '>>', '%'])
-ASSIGNMENT_EXPRESSION_OP = [':='] if sys.version_info >= (3, 8) else []
+ASSIGNMENT_EXPRESSION_OP = [':='] if sys.version_info >= (3, 0) else []
 WS_NEEDED_OPERATORS = frozenset([
-    '**=', '*=', '/=', '//=', '+=', '-=', '!=', '<>', '<', '>', ':=',
+    '**=', '*=', '/=', '//=', '+=', '-=', '!=', '<>', '<', '>',
     '%=', '^=', '&=', '|=', '==', '<=', '>=', '<<=', '>>=', '=',
     'and', 'in', 'is', 'or', '->'] +
     ASSIGNMENT_EXPRESSION_OP)
