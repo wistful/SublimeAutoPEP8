@@ -522,7 +522,7 @@ def missing_whitespace(logical_line):
                 continue  # Slice syntax, no space required
             if char == ',' and next_char == ')':
                 continue  # Allow tuple with only one element: (3,)
-            if char == ':' and next_char == '=' and sys.version_info >= (3, 0):
+            if char == ':' and next_char == '=' and sys.version_info >= (3, 8):
                 continue  # Allow assignment expression
             yield index, "E231 missing whitespace after '%s'" % char
 
