@@ -2334,6 +2334,7 @@ class ReformattedLines(object):
         """Delete all whitespace from the end of the line."""
         while isinstance(self._lines[-1], (self._Space, self._LineBreak,
                                            self._Indent)):
+            print(self._lines)
             if ':=' in self._lines:
                 continue
             del self._lines[-1]
