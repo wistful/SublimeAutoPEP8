@@ -2251,7 +2251,7 @@ class ReformattedLines(object):
         if so, to remove extraneous whitespaces and add a line
         break/indent before it if needed.
         """
-        if unicode(item) == '=' and self._prev_item != ':':
+        if unicode(item) == '=':
             # This is the assignment in the initializer. Just remove spaces for
             # now.
             self._delete_whitespace()
@@ -2334,6 +2334,9 @@ class ReformattedLines(object):
         """Delete all whitespace from the end of the line."""
         while isinstance(self._lines[-1], (self._Space, self._LineBreak,
                                            self._Indent)):
+            if len(self._lines) > 3:  # ':= '
+                if self._lines[-2] == '=' and if self._lines[-3] == ':':
+                    continue
             del self._lines[-1]
 
 
