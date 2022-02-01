@@ -1,5 +1,7 @@
 ### Sublime Auto PEP8 Formatting
 
+**Note**: project is no longer supported.
+
 ## About
 Automatically formats Python code to conform to the PEP 8 style guide using [autopep8](https://github.com/hhatto/autopep8) library.
 
